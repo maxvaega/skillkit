@@ -57,13 +57,20 @@ async def main():
     print()
 
     try:
-        # Find a skill with scripts
+        # Find demo-skill for demonstration (falls back to any skill with scripts)
         skill_with_scripts = None
         for metadata in skill_metadata_list:
-            skill = manager.load_skill(metadata.name)
-            if skill.scripts:
-                skill_with_scripts = skill
+            if metadata.name == 'demo-skill':
+                skill_with_scripts = manager.load_skill(metadata.name)
                 break
+
+        # Fallback: find any skill with scripts
+        if not skill_with_scripts:
+            for metadata in skill_metadata_list:
+                skill = manager.load_skill(metadata.name)
+                if skill.scripts:
+                    skill_with_scripts = skill
+                    break
 
         if skill_with_scripts:
             print(f"Using skill: {skill_with_scripts.metadata.name}")
