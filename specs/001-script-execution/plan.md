@@ -1,13 +1,13 @@
-# Implementation Plan: Script Execution Support
+# Implementation Plan: [FEATURE]
 
-**Branch**: `001-script-execution` | **Date**: 2025-01-18 | **Spec**: [spec.md](./spec.md)
-**Input**: Feature specification from `/specs/001-script-execution/spec.md`
+**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
+**Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
 
 **Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/commands/plan.md` for the execution workflow.
 
 ## Summary
 
-Enable skills to bundle and execute deterministic scripts (Python, Shell, JavaScript, Ruby, Perl) with security controls, timeout enforcement, and LangChain integration. Scripts are detected lazily during skill invocation and exposed as separate StructuredTools (e.g., "pdf-extractor.extract") alongside existing prompt-based tools. Arguments pass via JSON stdin, outputs capture to stdout/stderr, and security validates paths to prevent traversal attacks. Tool restriction enforcement requires "Bash" in allowed-tools.
+[Extract from feature spec: primary requirement + technical approach from research]
 
 ## Technical Context
 
@@ -17,23 +17,21 @@ Enable skills to bundle and execute deterministic scripts (Python, Shell, JavaSc
   the iteration process.
 -->
 
-**Language/Version**: Python 3.10+ (minimum for existing skillkit v0.3.0 compatibility)
-**Primary Dependencies**: PyYAML 6.0+ (existing), aiofiles 23.0+ (existing), subprocess (stdlib), pathlib (stdlib)
-**Storage**: Filesystem-based (scripts stored in skill directories: `scripts/` or skill root)
-**Testing**: pytest 7.0+ with pytest-asyncio 0.21+ for async tests, pytest-cov 4.0+ for coverage
-**Target Platform**: Cross-platform (Linux, macOS, Windows with consistent interpreter availability)
-**Project Type**: Single library project (extending existing skillkit core)
-**Performance Goals**: Script detection <10ms for 50 scripts; execution overhead <50ms for 95% of calls
-**Constraints**: 10MB output limit per stream (stdout/stderr); 30s default timeout (max 600s); 5-level nested script directories
-**Scale/Scope**: Support skills with up to 50 scripts; handle concurrent executions; maintain backward compatibility with v0.1/v0.2
+**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
+**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
+**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
+**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
+**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
+**Project Type**: [single/web/mobile - determines source structure]  
+**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
+**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
+**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
 
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-**Status**: ✅ PASS (Constitution file is template-only, no active principles to validate)
-
-**Note**: Project constitution at `.specify/memory/constitution.md` contains only placeholder template. When constitution is ratified with concrete principles, this section will validate against those requirements.
+[Gates determined based on constitution file]
 
 ## Project Structure
 
@@ -50,56 +48,57 @@ specs/[###-feature]/
 ```
 
 ### Source Code (repository root)
+<!--
+  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
+  for this feature. Delete unused options and expand the chosen structure with
+  real paths (e.g., apps/admin, packages/something). The delivered plan must
+  not include Option labels.
+-->
 
 ```text
-src/skillkit/
-├── core/
-│   ├── discovery.py          # Existing (will extend with script detection)
-│   ├── parser.py              # Existing (no changes)
-│   ├── models.py              # Existing (will add ScriptMetadata, ScriptExecutionResult)
-│   ├── manager.py             # Existing (will add execute_skill_script method)
-│   ├── processors.py          # Existing (no changes)
-│   ├── exceptions.py          # Existing (will add script-specific exceptions)
-│   ├── script_detector.py     # NEW - Script detection logic
-│   └── script_executor.py     # NEW - Script execution with security controls
-├── integrations/
-│   └── langchain.py           # Existing (will extend with script tool generation)
-└── __init__.py                # Existing (export new script classes)
+# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
+src/
+├── models/
+├── services/
+├── cli/
+└── lib/
 
 tests/
-├── test_script_detector.py    # NEW - Script detection tests
-├── test_script_executor.py    # NEW - Script execution tests
-├── test_manager.py            # Existing (extend with script execution tests)
-├── test_langchain.py          # Existing (extend with script tool tests)
-└── fixtures/
-    └── skills/
-        ├── script-skill/      # NEW - Test skill with various scripts
-        │   ├── SKILL.md
-        │   └── scripts/
-        │       ├── extract.py
-        │       ├── convert.sh
-        │       └── utils/
-        │           └── parser.py
-        └── restricted-skill/  # NEW - Test tool restriction enforcement
-            ├── SKILL.md (allowed-tools: Read, Write)
-            └── scripts/
-                └── blocked.py
+├── contract/
+├── integration/
+└── unit/
 
-examples/
-├── script_execution.py        # NEW - Demonstrate script execution
-└── skills/
-    └── pdf-extractor/         # NEW - Real-world example skill
-        ├── SKILL.md
-        └── scripts/
-            ├── extract.py
-            ├── convert.sh
-            └── parse.py
+# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
+backend/
+├── src/
+│   ├── models/
+│   ├── services/
+│   └── api/
+└── tests/
+
+frontend/
+├── src/
+│   ├── components/
+│   ├── pages/
+│   └── services/
+└── tests/
+
+# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
+api/
+└── [same as backend above]
+
+ios/ or android/
+└── [platform-specific structure: feature modules, UI flows, platform tests]
 ```
 
-**Structure Decision**: Single library project (Option 1). This feature extends the existing skillkit core library with two new modules (`script_detector.py`, `script_executor.py`) and updates existing modules (`models.py`, `manager.py`, `exceptions.py`, `langchain.py`). Test structure mirrors source with new test files for script components.
+**Structure Decision**: [Document the selected structure and reference the real
+directories captured above]
 
 ## Complexity Tracking
 
 > **Fill ONLY if Constitution Check has violations that must be justified**
 
-**Status**: N/A (No constitution violations - constitution is template-only)
+| Violation | Why Needed | Simpler Alternative Rejected Because |
+|-----------|------------|-------------------------------------|
+| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
+| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |

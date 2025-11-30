@@ -22,6 +22,14 @@
 - Q: How should the system handle scripts that crash with segmentation faults or other signals (e.g., SIGKILL, SIGSEGV)? → A: Return negative exit code (e.g., -11 for SIGSEGV), stderr="Signal: SIGSEGV", log as ERROR
 - Q: How should the system handle concurrent script executions from the same skill (e.g., agent invokes same script multiple times in parallel)? → A: Allow concurrent executions (each gets independent subprocess, no shared state)
 
+### Session 2025-11-30
+
+- Q: Should FR-008 (tool restriction enforcement) and User Story 4 (Tool Restriction Enforcement for Scripts) be removed completely or kept as future consideration? → A: Remove both FR-008 requirement AND User Story 4 entirely from the spec (complete removal)
+- Q: Should ToolRestrictionError exception class and related test files be removed or kept as deprecated code? → A: Remove ToolRestrictionError exception class entirely plus all related test files/test cases
+- Q: Should references to tool restrictions in documentation, examples, and Related Work section be removed or kept with deprecation notes? → A: Remove all references to tool restrictions from documentation, examples, and Related Work section
+- Q: Should tool restriction enforcement be documented in "Out of Scope" section to clarify it's intentionally not supported? → A: Add "Tool restriction enforcement for scripts" to Out of Scope section with brief rationale
+- Q: Should the allowed-tools field be removed from SkillMetadata model or kept for backward compatibility? → A: Keep allowed-tools field in SkillMetadata for compatibility but remove all code that checks/enforces it
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Execute Skill Scripts for Deterministic Processing (Priority: P1)
@@ -76,24 +84,7 @@ As an agent developer, I want scripts to respect execution timeouts so that infi
 
 ---
 
-### User Story 4 - Tool Restriction Enforcement for Scripts (Priority: P2)
-
-As a skill author, I want to declare which tools my skill can use (including Bash for scripts) so that users know the skill's capabilities and limitations upfront.
-
-**Why this priority**: Tool restrictions provide transparency and control, but the feature still works without them. This is important for trust but not blocking for basic functionality.
-
-**Independent Test**: Can be fully tested by creating two skills - one with `allowed-tools: Bash, Read` (allowed) and one with `allowed-tools: Read, Write` (blocked) - and verifying script execution succeeds for the first and raises ToolRestrictionError for the second.
-
-**Acceptance Scenarios**:
-
-1. **Given** a skill with `allowed-tools: Bash, Read, Write`, **When** the agent attempts to execute a script, **Then** execution proceeds successfully because Bash is in the allowed list
-2. **Given** a skill with `allowed-tools: Read, Write` (no Bash), **When** the agent attempts to execute a script, **Then** a ToolRestrictionError is raised with message "Tool 'Bash' not allowed for skill..."
-3. **Given** a skill with no `allowed-tools` specified (null/empty), **When** the agent attempts to execute a script, **Then** execution proceeds successfully (no restrictions)
-4. **Given** a tool restriction error, **When** the error is raised, **Then** the error message includes the skill name and list of allowed tools for debugging
-
----
-
-### User Story 5 - Environment Context for Scripts (Priority: P2)
+### User Story 4 - Environment Context for Scripts (Priority: P2)
 
 As a skill author, I want my scripts to have access to skill metadata (name, base directory, version) so that scripts can locate supporting files and provide context-aware logging.
 
@@ -110,7 +101,7 @@ As a skill author, I want my scripts to have access to skill metadata (name, bas
 
 ---
 
-### User Story 6 - Automatic Script Detection (Priority: P3)
+### User Story 5 - Automatic Script Detection (Priority: P3)
 
 As a skill author, I want my scripts to be automatically discovered so that I don't need to manually register each script file.
 
@@ -150,18 +141,17 @@ As a skill author, I want my scripts to be automatically discovered so that I do
 - **FR-005**: System MUST enforce execution timeouts with configurable duration (default 30 seconds) and kill processes that exceed the timeout
 - **FR-006**: System MUST reject scripts with setuid or setgid permissions before execution
 - **FR-007**: System MUST log all script executions with timestamp, skill name, script path, arguments (truncated to 256 chars), exit code, and execution time for security auditing
-- **FR-008**: System MUST enforce tool restrictions by checking if "Bash" is in the skill's allowed-tools list before executing scripts
-- **FR-009**: System MUST detect executable scripts lazily during skill invocation (after content is loaded but before script execution) by scanning skill directories for files with executable extensions (.py, .sh, .js, .rb, .pl); interpreter selection uses extension-based mapping (.py → python3, .sh → bash, .js → node, .rb → ruby, .pl → perl) with shebang line fallback for edge cases; description extraction MUST parse the first comment block (using #, //, or """ delimiters depending on script type) and use it as the script's description; if no comment block exists, description MUST be empty string
-- **FR-010**: System MUST resolve symlinks and verify the final resolved path is within the skill base directory
-- **FR-011**: System MUST pass arguments to scripts as JSON-serialized data via stdin (scripts read from standard input and parse JSON); this prevents shell interpolation and injection attacks while supporting complex data structures
-- **FR-012**: System MUST handle script execution errors gracefully by returning error information in the execution result rather than crashing
-- **FR-013**: Users MUST be able to configure script timeout via SkillManager initialization parameter
-- **FR-014**: Users MUST be able to execute scripts directly via SkillManager.execute_skill_script() API; LangChain integration MUST create a separate StructuredTool for each detected script (e.g., skill "pdf-extractor" with scripts "extract.py", "convert.sh", "parse.py" generates three tools: "pdf-extractor.extract", "pdf-extractor.convert", "pdf-extractor.parse", each invoking its respective script); if the skill has a prompt, the prompt-based tool is preserved alongside script tools (skills can expose 1+N tools: one prompt tool + N script tools); script-based tools MUST declare a free-form JSON input schema (single field accepting any JSON structure) that passes agent-provided data directly to the script via stdin; on successful execution (exit_code==0), tools MUST return stdout as content with is_error=false; on failure (exit_code!=0), tools MUST raise exception with stderr as message and is_error=true; return format follows structure: {"type": "tool_result", "tool_use_id": "<id>", "content": "string | list | null", "is_error": boolean}
-- **FR-015**: System MUST scan both `scripts/` directory (primary) and skill root directory (secondary fallback) for executable files
-- **FR-016**: System MUST support nested script directories (e.g., `scripts/utils/parser.py`) up to reasonable depth
-- **FR-017**: Script detection MUST complete in under 10ms for skills with fewer than 50 scripts
-- **FR-018**: System MUST return execution results in a structured format (ScriptExecutionResult dataclass) with stdout, stderr, exit_code, execution_time_ms, and script_path fields
-- **FR-019**: System MUST raise an InterpreterNotFoundError if the required interpreter (python3, bash, node, ruby, perl) is not available in PATH during script execution
+- **FR-008**: System MUST detect executable scripts lazily during skill invocation (after content is loaded but before script execution) by scanning skill directories for files with executable extensions (.py, .sh, .js, .rb, .pl); interpreter selection uses extension-based mapping (.py → python3, .sh → bash, .js → node, .rb → ruby, .pl → perl) with shebang line fallback for edge cases; description extraction MUST parse the first comment block (using #, //, or """ delimiters depending on script type) and use it as the script's description; if no comment block exists, description MUST be empty string
+- **FR-009**: System MUST resolve symlinks and verify the final resolved path is within the skill base directory
+- **FR-010**: System MUST pass arguments to scripts as JSON-serialized data via stdin (scripts read from standard input and parse JSON); this prevents shell interpolation and injection attacks while supporting complex data structures
+- **FR-011**: System MUST handle script execution errors gracefully by returning error information in the execution result rather than crashing
+- **FR-012**: Users MUST be able to configure script timeout via SkillManager initialization parameter
+- **FR-013**: Users MUST be able to execute scripts directly via SkillManager.execute_skill_script() API; LangChain integration MUST create a separate StructuredTool for each detected script (e.g., skill "pdf-extractor" with scripts "extract.py", "convert.sh", "parse.py" generates three tools: "pdf-extractor.extract", "pdf-extractor.convert", "pdf-extractor.parse", each invoking its respective script); if the skill has a prompt, the prompt-based tool is preserved alongside script tools (skills can expose 1+N tools: one prompt tool + N script tools); script-based tools MUST declare a free-form JSON input schema (single field accepting any JSON structure) that passes agent-provided data directly to the script via stdin; on successful execution (exit_code==0), tools MUST return stdout as content with is_error=false; on failure (exit_code!=0), tools MUST raise exception with stderr as message and is_error=true; return format follows structure: {"type": "tool_result", "tool_use_id": "<id>", "content": "string | list | null", "is_error": boolean}
+- **FR-014**: System MUST scan both `scripts/` directory (primary) and skill root directory (secondary fallback) for executable files
+- **FR-015**: System MUST support nested script directories (e.g., `scripts/utils/parser.py`) up to reasonable depth
+- **FR-016**: Script detection MUST complete in under 10ms for skills with fewer than 50 scripts
+- **FR-017**: System MUST return execution results in a structured format (ScriptExecutionResult dataclass) with stdout, stderr, exit_code, execution_time_ms, and script_path fields
+- **FR-018**: System MUST raise an InterpreterNotFoundError if the required interpreter (python3, bash, node, ruby, perl) is not available in PATH during script execution
 
 ### Key Entities *(include if feature involves data)*
 
@@ -180,11 +170,10 @@ As a skill author, I want my scripts to be automatically discovered so that I do
 - **SC-003**: All script outputs up to 10MB are captured completely without truncation or data loss; outputs exceeding 10MB are truncated at the limit with a WARNING log entry including skill name, script path, and actual output size
 - **SC-004**: Script timeouts are enforced within ±100ms of configured timeout value
 - **SC-005**: 100% of script executions are logged with all required audit fields (timestamp, skill name, script path, exit code, duration)
-- **SC-006**: Tool restriction enforcement prevents 100% of unauthorized script executions when Bash is not in allowed-tools
-- **SC-007**: Script detection completes in under 10ms for 95% of skills with 50 or fewer scripts
-- **SC-008**: Scripts execute successfully across all supported platforms (Linux, macOS, Windows) with consistent behavior
-- **SC-009**: All script execution errors are handled gracefully with zero system crashes caused by script failures
-- **SC-010**: Users can successfully configure custom timeouts ranging from 1 second to 600 seconds (10 minutes)
+- **SC-006**: Script detection completes in under 10ms for 95% of skills with 50 or fewer scripts
+- **SC-007**: Scripts execute successfully across all supported platforms (Linux, macOS, Windows) with consistent behavior
+- **SC-008**: All script execution errors are handled gracefully with zero system crashes caused by script failures
+- **SC-009**: Users can successfully configure custom timeouts ranging from 1 second to 600 seconds (10 minutes)
 
 ## Assumptions *(mandatory)*
 
@@ -194,7 +183,6 @@ As a skill author, I want my scripts to be automatically discovered so that I do
 - Concurrent script executions are supported with independent subprocesses per invocation; scripts are responsible for managing their own file-level concurrency (e.g., file locking) if needed
 - Performance targets assume modern hardware (SSD storage, multi-core CPU) and reasonable script complexity
 - Audit logging uses Python's standard logging framework; persistence and log rotation are handled by deployment configuration
-- Tool restriction enforcement is complementary to framework-level tool filtering; frameworks may provide additional controls
 - Script detection runs once during skill invocation (lazy, not during initial discovery) to minimize performance impact
 - Script outputs are captured up to 10MB per stream (stdout/stderr); outputs exceeding this limit are truncated with logged warnings; skills requiring larger outputs should write to files instead
 - Resource limits (CPU, memory) are enforced at the OS/container level, not by skillkit library
@@ -206,7 +194,7 @@ As a skill author, I want my scripts to be automatically discovered so that I do
 
 - **FilePathResolver** (v0.2.0+): Required for path security validation and traversal prevention
 - **SkillManager** (v0.2.0+): Required for skill lifecycle management and integration
-- **SkillMetadata** (v0.1.0+): Required for accessing skill metadata (name, version, allowed-tools)
+- **SkillMetadata** (v0.1.0+): Required for accessing skill metadata (name, version); the allowed-tools field is preserved for backward compatibility but not used for script execution enforcement
 - **Python subprocess module** (stdlib): Required for process execution and output capture
 - **Python pathlib module** (stdlib): Required for path manipulation and validation
 
@@ -221,6 +209,7 @@ As a skill author, I want my scripts to be automatically discovered so that I do
 
 ## Out of Scope *(optional - include only if useful for clarity)*
 
+- **Tool restriction enforcement for scripts**: Checking if "Bash" is in the skill's allowed-tools list before executing scripts is not enforced; skills can execute scripts regardless of allowed-tools declaration to simplify implementation and speed up development
 - **Script result caching**: Caching of script execution results for identical inputs is deferred to v0.4.0
 - **Resource limits enforcement**: CPU and memory limits for scripts are delegated to OS/container level, not enforced by skillkit
 - **Advanced metadata extraction**: Parsing docstrings for argument schemas and return types is deferred to v0.4.0+
@@ -233,7 +222,6 @@ As a skill author, I want my scripts to be automatically discovered so that I do
 ## Related Work *(optional - include only if relevant)*
 
 - **FR-5 (File Reference Resolution)**: Script execution leverages the same FilePathResolver infrastructure for path security
-- **FR-4.3 (Tool Restrictions)**: Script execution integrates with tool restriction enforcement (requires "Bash" in allowed-tools)
 - **v0.2.0 File Path Resolution**: Existing security patterns for validating file references are reused for script paths
 - **Anthropic Skills Specification**: Script execution aligns with Anthropic's skill format, enabling 100% compatibility with Anthropic skills that include scripts
 - **LangChain Integration**: Each detected script is exposed as a separate StructuredTool instance with naming pattern `{skill_name}.{script_name}` (e.g., "pdf-extractor" skill with "extract.py" and "convert.sh" generates "pdf-extractor.extract" and "pdf-extractor.convert" tools); skills with prompts retain their prompt-based tool (named `{skill_name}`) alongside script tools, allowing skills to expose both conversational guidance (via prompt) and deterministic operations (via scripts); script tool descriptions are extracted from the first comment block in each script file (empty string if no comment exists), with free-form JSON input schemas; tools return stdout on success (exit_code==0) or raise exception with stderr on failure (exit_code!=0), following format: {"type": "tool_result", "tool_use_id": "<id>", "content": "string | list | null", "is_error": boolean}; this maintains backward compatibility with v0.1/v0.2 while extending capabilities

@@ -236,54 +236,6 @@ if result.timeout:
 """)
     print()
 
-    # Example 5: Tool Restriction Enforcement
-    print("-" * 80)
-    print("Example 5: Tool Restriction Enforcement")
-    print("-" * 80)
-    print()
-
-    print("Skills can restrict which tools they're allowed to use.")
-    print("Script execution requires the 'Bash' tool in allowed-tools.")
-    print()
-
-    # Try to find a restricted skill
-    restricted_skill = None
-    for metadata in skill_metadata_list:
-        if metadata.allowed_tools and 'Bash' not in metadata.allowed_tools:
-            restricted_skill = manager.load_skill(metadata.name)
-            break
-
-    if restricted_skill:
-        print(f"Testing with restricted skill: {restricted_skill.metadata.name}")
-        print(f"Allowed tools: {restricted_skill.metadata.allowed_tools}")
-        print()
-
-        try:
-            print(f"Attempting to execute script in restricted skill {restricted_skill.metadata.name}..")
-            print()
-            if restricted_skill.scripts:
-                result = manager.execute_skill_script(
-                    skill_name=restricted_skill.metadata.name,
-                    script_name=restricted_skill.scripts[0].name,
-                    arguments={},
-                    timeout=10
-                )
-        except ToolRestrictionError as e:
-            print(f"✓ Tool restriction enforced: {e}")
-            print()
-    else:
-        print("No restricted skills found for demonstration")
-        print()
-        print("To test tool restrictions, create a skill with:")
-        print("---")
-        print("name: my-skill")
-        print("allowed-tools:")
-        print("  - Read")
-        print("  - Write")
-        print("  # Note: 'Bash' is not in the list")
-        print("---")
-        print()
-
     # Summary
     print("=" * 80)
     print("Summary: Key Features")
