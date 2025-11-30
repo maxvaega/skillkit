@@ -198,6 +198,8 @@ print(f"Arguments: {args}")
     try:
         if skill_with_scripts:
             # Try to execute a non-existent script
+            print(f"Attempting to execute script named 'nonexistent_script' in skill: {skill_with_scripts.metadata.name}..")
+            print()
             result = manager.execute_skill_script(
                 skill_name=skill_with_scripts.metadata.name,
                 script_name="nonexistent_script",
@@ -257,6 +259,8 @@ if result.timeout:
         print()
 
         try:
+            print(f"Attempting to execute script in restricted skill {restricted_skill.metadata.name}..")
+            print()
             if restricted_skill.scripts:
                 result = manager.execute_skill_script(
                     skill_name=restricted_skill.metadata.name,
