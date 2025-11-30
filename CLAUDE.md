@@ -297,6 +297,7 @@ skillkit/
 - **Quality**: ruff 0.1.0+, mypy 1.0+
 - Filesystem-based (scripts stored in skill directories: `scripts/` or skill root) (001-script-execution)
 - Python 3.10+ (minimum for existing skillkit v0.3.0 compatibility) + PyYAML 6.0+ (existing), aiofiles 23.0+ (existing), subprocess (stdlib), pathlib (stdlib) (001-script-execution)
+- Filesystem-based (Python source files and test files to be modified/removed) (001-script-execution)
 
 ## v0.2 Implementation Notes
 
@@ -356,4 +357,5 @@ skillkit/
 5. **Security first**: Always validate paths, sanitize inputs, use safe YAML loading
 
 ## Recent Changes
+- 001-script-execution: Added Python 3.10+ (minimum for existing skillkit v0.3.0 compatibility) + PyYAML 6.0+ (existing), aiofiles 23.0+ (existing), subprocess (stdlib), pathlib (stdlib)
 - 001-script-execution: Added Python 3.10+ (minimum for v0.3.0 compatibility with existing codebase) + PyYAML 6.0+ (existing), aiofiles 23.0+ (existing), subprocess (stdlib), pathlib (stdlib)
