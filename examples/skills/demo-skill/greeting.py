@@ -34,6 +34,7 @@ def main():
 
     # Access injected environment variables
     skill_name = os.environ.get('SKILL_NAME', 'unknown')
+    skill_base_dir = os.environ.get('SKILL_BASE_DIR', 'unknown')
     skill_version = os.environ.get('SKILL_VERSION', '0.0.0')
     skillkit_version = os.environ.get('SKILLKIT_VERSION', 'unknown')
 
@@ -53,6 +54,7 @@ def main():
     print()
     print("Environment Variables:")
     print(f"  • SKILL_NAME: {skill_name}")
+    print(f"  • SKILL_BASE_DIR: {skill_base_dir}")
     print(f"  • SKILL_VERSION: {skill_version}")
     print(f"  • SKILLKIT_VERSION: {skillkit_version}")
     print()
