@@ -327,7 +327,7 @@ def create_script_tools(skill: "Skill", manager: "SkillManager") -> List[Structu
             except Exception as e:
                 # Convert skillkit exceptions to ToolException
                 # This includes: ScriptNotFoundError, InterpreterNotFoundError,
-                # PathSecurityError, ToolRestrictionError, etc.
+                # PathSecurityError, etc.
                 raise ToolException(f"Script execution error: {str(e)}") from e
 
         async def ainvoke_script(

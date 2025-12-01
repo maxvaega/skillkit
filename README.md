@@ -395,23 +395,9 @@ Script execution includes comprehensive security controls:
 
 - **Path Validation**: Prevents path traversal attacks
 - **Permission Checks**: Blocks setuid/setgid scripts (Unix/Linux)
-- **Tool Restrictions**: Requires 'Bash' in skill's `allowed-tools`
 - **Timeout Enforcement**: Kills hung processes (default 30s, max 600s)
 - **Output Limits**: Truncates output at 10MB per stream
 - **Audit Logging**: All executions logged with metadata
-
-### Tool Restriction Example
-
-```yaml
----
-name: data-processor
-description: Process data with Python scripts
-allowed-tools:
-  - Bash  # Required for script execution
-  - Read
-  - Write
----
-```
 
 ### LangChain Integration
 
@@ -439,7 +425,6 @@ tools = create_langchain_tools(manager)
 from skillkit.core.exceptions import (
     ScriptNotFoundError,
     InterpreterNotFoundError,
-    ToolRestrictionError,
     PathSecurityError
 )
 
@@ -453,8 +438,6 @@ except ScriptNotFoundError:
     print("Script not found in skill")
 except InterpreterNotFoundError:
     print("Required interpreter not available")
-except ToolRestrictionError:
-    print("Skill not allowed to execute scripts")
 except PathSecurityError:
     print("Security validation failed")
 ```
@@ -604,12 +587,11 @@ python examples/file_references.py
 - ✅ Script Execution Support (Python, Shell, JavaScript, Ruby, Perl)
 - ✅ Automatic script detection (recursive, up to 5 levels)
 - ✅ Security controls (path validation, permission checks, timeout enforcement)
-- ✅ Tool restriction enforcement (requires "Bash" in allowed-tools)
 - ✅ Environment variable injection (SKILL_NAME, SKILL_BASE_DIR, SKILL_VERSION, SKILLKIT_VERSION)
 - ✅ LangChain script tool integration (each script exposed as separate StructuredTool)
 - ✅ Comprehensive error handling and audit logging
 - ✅ Cross-platform support (Linux, macOS, Windows)
-- ✅ Backward compatible with v0.1/v0.2
+- ✅ Backward compatible with v0.1/v0.2 (except ToolRestrictionError removed)
 
 ### v0.4 (Planned)
 - Additional framework integrations (LlamaIndex, CrewAI, Haystack)

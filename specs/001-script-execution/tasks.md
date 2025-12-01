@@ -1,272 +1,216 @@
----
-
-description: "Task list for Script Execution Support feature"
----
-
-# Tasks: Script Execution Support
+# Tasks: Remove Tool Restriction Enforcement
 
 **Input**: Design documents from `/specs/001-script-execution/`
-**Prerequisites**: plan.md, spec.md, data-model.md, contracts/, quickstart.md, research.md
+**Prerequisites**: plan.md, spec.md (updated with FR-008 removed), research-removal-tool-restrictions.md, data-model-removal-tool-restrictions.md, contracts/removal-api-contract.md, quickstart-removal-tool-restrictions.md
 
-**Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
+**Feature**: Remove all tool restriction enforcement code while preserving `allowed-tools` field for backward compatibility
 
-**Tests**: Not explicitly requested in spec.md - test tasks are marked as optional enhancements
+**Organization**: Tasks organized by functional area (code removal, test removal, documentation updates, verification)
 
-## Format: `[ID] [P?] [Story] Description`
+**Context**: This feature removes previously implemented tool restriction enforcement (FR-008, User Story 4) while maintaining backward compatibility with the `allowed-tools` field in SkillMetadata.
+
+## Format: `- [ ] [ID] [P?] Description with file path`
 
 - **[P]**: Can run in parallel (different files, no dependencies)
-- **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3)
-- Include exact file paths in descriptions
-
-## Path Conventions
-
-- Single project structure: `src/skillkit/`, `tests/` at repository root
-- All paths relative to repository root
+- File paths are absolute from repository root
 
 ---
 
-## Phase 1: Setup (Shared Infrastructure)
+## Phase 1: Pre-Removal Analysis
 
-**Purpose**: Project initialization and basic structure for v0.3.0 script execution feature
+**Purpose**: Identify all references to tool restrictions before removal
 
-- [X] T001 Create feature branch 001-script-execution from main
-- [X] T002 [P] Create src/skillkit/core/scripts.py module with INTERPRETER_MAP constant
-- [X] T003 [P] Create tests/test_script_detector.py test file structure
-- [X] T004 [P] Create tests/test_script_executor.py test file structure
-- [X] T005 [P] Create tests/fixtures/skills/script-skill/ test fixture directory with SKILL.md
-- [X] T006 [P] Create examples/script_execution.py example file skeleton
-- [X] T007 [P] Create examples/skills/pdf-extractor/ example skill directory with SKILL.md
+- [ ] T001 Search for all occurrences of `ToolRestrictionError` in codebase using grep: `grep -r "ToolRestrictionError" src/ tests/ examples/`
+- [ ] T002 Search for all occurrences of `_check_tool_restrictions` in codebase using grep: `grep -r "_check_tool_restrictions" src/ tests/`
+- [ ] T003 Search for all occurrences of "tool restriction" in documentation files using grep: `grep -r "tool restriction" README.md CLAUDE.md .docs/ specs/`
+- [ ] T004 Search for all test files containing tool restriction tests using grep: `grep -r "test.*tool.*restriction" tests/`
+- [ ] T005 Create backup of current branch state: `git stash` or `git branch backup-before-removal`
 
----
-
-## Phase 2: Foundational (Blocking Prerequisites)
-
-**Purpose**: Core infrastructure that MUST be complete before ANY user story can be implemented
-
-**⚠️ CRITICAL**: No user story work can begin until this phase is complete
-
-- [X] T008 Add script-specific exceptions to src/skillkit/core/exceptions.py: InterpreterNotFoundError, ScriptNotFoundError, ScriptPermissionError, ArgumentSerializationError, ArgumentSizeError
-- [X] T009 [P] Implement ScriptMetadata dataclass in src/skillkit/core/scripts.py with fields: name, path, script_type, description, and get_fully_qualified_name method
-- [X] T010 [P] Implement ScriptExecutionResult dataclass in src/skillkit/core/scripts.py with fields: stdout, stderr, exit_code, execution_time_ms, script_path, signal, signal_number, stdout_truncated, stderr_truncated, and properties: success, timeout, signaled
-- [X] T011 [P] Implement INTERPRETER_MAP constant dict in src/skillkit/core/scripts.py mapping extensions (.py, .sh, .js, .rb, .pl, .bat, .cmd, .ps1) to interpreters
-- [X] T012 [P] Add type aliases to src/skillkit/core/scripts.py: ScriptArguments, ScriptEnvironment, ScriptList
-- [X] T013 Extend Skill dataclass in src/skillkit/core/models.py with _scripts field (Optional[List[ScriptMetadata]]) and scripts property (lazy-loaded)
-- [X] T014 Update src/skillkit/__init__.py to export new script classes: ScriptMetadata, ScriptExecutionResult, and script exceptions
-
-**Checkpoint**: Foundation ready - user story implementation can now begin in parallel
+**Checkpoint**: All references identified (expect ~8 source file references, ~15 test file references, ~10 doc references) - ready for systematic removal
 
 ---
 
-## Phase 3: User Story 1 - Execute Skill Scripts for Deterministic Processing (Priority: P1) 🎯 MVP
+## Phase 2: Core Code Removal
 
-**Goal**: Enable skills to execute scripts with arguments passed via JSON stdin, capture stdout/stderr, return results to agent
+**Purpose**: Remove enforcement logic from source code
 
-**Independent Test**: Create a simple skill with a Python script, invoke it with test data, verify output is captured and returned correctly
+### Exception Class Removal
 
-### Implementation for User Story 1
+- [ ] T006 Remove `ToolRestrictionError` exception class definition from src/skillkit/core/exceptions.py (lines 427-461 per plan.md)
+- [ ] T007 Remove `ToolRestrictionError` from `__all__` export list in src/skillkit/core/exceptions.py if present
 
-- [X] T015 [P] [US1] Implement ScriptDescriptionExtractor class in src/skillkit/core/scripts.py with extract() method supporting Python docstrings, shell comments, JSDoc, Ruby/Perl comment blocks
-- [X] T016 [P] [US1] Implement ScriptDetector class in src/skillkit/core/scripts.py with __init__(max_depth, max_lines_for_description) and detect_scripts() method
-- [X] T017 [US1] Implement _scan_directories() method in ScriptDetector to scan scripts/ directory and skill root
-- [X] T018 [US1] Implement _is_executable_script() method in ScriptDetector to filter files by extension and exclude hidden/cache files
-- [X] T019 [US1] Implement _extract_metadata() method in ScriptDetector to create ScriptMetadata from detected files
-- [X] T020 [US1] Implement _get_script_type() helper function in src/skillkit/core/scripts.py to map extensions to script types
-- [X] T021 [P] [US1] Implement ScriptExecutor class __init__ in src/skillkit/core/scripts.py with timeout, max_output_size, use_cache parameters
-- [X] T022 [US1] Implement _validate_script_path() method in ScriptExecutor using os.path.realpath and os.path.commonpath for path traversal prevention
-- [X] T023 [US1] Implement _check_permissions() method in ScriptExecutor to reject setuid/setgid scripts
-- [X] T024 [US1] Implement _resolve_interpreter() method in ScriptExecutor with extension mapping and shebang fallback
-- [X] T025 [US1] Implement _serialize_arguments() method in ScriptExecutor with JSON serialization and size limit validation
-- [X] T026 [US1] Implement _build_environment() method in ScriptExecutor to inject SKILL_NAME, SKILL_BASE_DIR, SKILL_VERSION, SKILLKIT_VERSION
-- [X] T027 [US1] Implement _execute_subprocess() method in ScriptExecutor to run subprocess.run() with shell=False, capture output, handle signals
-- [X] T028 [US1] Implement _handle_output_truncation() method in ScriptExecutor to truncate stdout/stderr at 10MB limit
-- [X] T029 [US1] Implement _detect_signal() method in ScriptExecutor to parse negative exit codes as signals
-- [X] T030 [US1] Implement execute() orchestration method in ScriptExecutor coordinating all validation, execution, and error handling steps
-- [X] T031 [US1] Add audit logging to ScriptExecutor.execute() for INFO (success), ERROR (failure), WARNING (timeout/truncation) levels
-- [X] T032 [US1] Extend SkillManager in src/skillkit/core/manager.py with default_script_timeout parameter in __init__
-- [X] T033 [US1] Implement execute_skill_script() method in SkillManager to look up skill, find script, call ScriptExecutor, handle errors
+### ScriptExecutor Method Removal
 
-**Checkpoint**: At this point, User Story 1 should be fully functional - scripts can be detected, executed, and results returned
+- [ ] T008 Remove `_check_tool_restrictions()` private method from src/skillkit/core/scripts.py (lines 833-869 per plan.md)
+- [ ] T009 Remove call to `self._check_tool_restrictions()` in `execute()` method in src/skillkit/core/scripts.py (line 1134 per plan.md)
+- [ ] T010 Update docstring for `execute()` method to remove `ToolRestrictionError` from "Raises" section in src/skillkit/core/scripts.py
+
+### Integration Updates
+
+- [ ] T011 [P] Remove `ToolRestrictionError` from import statement in src/skillkit/integrations/langchain.py
+- [ ] T012 [P] Remove or update comment mentioning `ToolRestrictionError` in exception handling in src/skillkit/integrations/langchain.py (line 330 per plan.md)
+- [ ] T013 [P] Remove `ToolRestrictionError` from exports in src/skillkit/__init__.py if present
+
+### Model Verification (NO CHANGES)
+
+- [ ] T014 Verify `allowed_tools` field remains in SkillMetadata in src/skillkit/core/models.py (should see NO changes to this file)
+- [ ] T015 Verify parser.py still parses `allowed-tools` from YAML (should see NO changes to src/skillkit/core/parser.py)
+
+**Checkpoint**: Core enforcement code removed - scripts now execute without tool restriction checks (verify with `grep -r "ToolRestrictionError" src/`)
 
 ---
 
-## Phase 4: User Story 2 - Safe Script Execution with Security Boundaries (Priority: P1)
+## Phase 3: Test Removal
 
-**Goal**: Implement security controls to prevent malicious scripts from accessing files outside skill directory or escalating privileges
+**Purpose**: Remove tests related to tool restriction enforcement while preserving field parsing tests
 
-**Independent Test**: Attempt path traversal attacks (../../etc/passwd), verify they're blocked with PathSecurityError, confirm all executions are logged
+### Test File Deletion
 
-### Implementation for User Story 2
+- [ ] T016 Delete entire test file tests/test_script_executor_phase6.py (150+ lines testing tool restrictions per plan.md)
+- [ ] T017 Delete test fixture directory tests/fixtures/skills/restricted-skill/ (tool restriction test fixture per plan.md)
 
-- [X] T034 [US2] Enhance _validate_script_path() in ScriptExecutor to validate symlinks don't point outside skill directory using os.path.realpath
-- [X] T035 [US2] Enhance _check_permissions() in ScriptExecutor to check both setuid (stat.S_ISUID) and setgid (stat.S_ISGID) bits
-- [X] T036 [US2] Add security violation logging to _validate_script_path() with ERROR level when path traversal detected
-- [X] T037 [US2] Add security violation logging to _check_permissions() with ERROR level when dangerous permissions detected
-- [X] T038 [US2] Implement audit log entry in execute() with timestamp, skill name, script path, arguments (truncated to 256 chars), exit code, execution time
+### Test Case Removal from Existing Files
 
-**Checkpoint**: Security boundaries enforced - path traversal blocked, dangerous permissions rejected, all executions audited
+- [ ] T018 Remove `ToolRestrictionError` test case from tests/test_script_executor.py (around line 420 per plan.md)
+- [ ] T019 [P] Search and remove any `ToolRestrictionError` references from tests/test_script_executor_phase3.py
+- [ ] T020 [P] Search and remove any `ToolRestrictionError` references from tests/test_script_executor_phase4.py
+- [ ] T021 [P] Search and remove any `ToolRestrictionError` import statements from all test files
 
----
+### Backward Compatibility Tests (KEEP THESE - NO CHANGES)
 
-## Phase 5: User Story 3 - Timeout Management for Long-Running Scripts (Priority: P1)
+- [ ] T022 Verify tests for `allowed_tools` field parsing in tests/test_parser.py remain unchanged (grep should find no changes)
+- [ ] T023 Verify tests for `allowed_tools` field in SkillMetadata in tests/test_models.py remain unchanged (grep should find no changes)
 
-**Goal**: Enforce execution timeouts to prevent infinite loops or hung processes from blocking the agent
-
-**Independent Test**: Create script with infinite loop, set 5-second timeout, verify process killed after 5 seconds with timeout error
-
-### Implementation for User Story 3
-
-- [X] T039 [US3] Implement timeout handling in _execute_subprocess() to catch subprocess.TimeoutExpired exception
-- [X] T040 [US3] Set exit_code to 124 and stderr to "Timeout" when subprocess.TimeoutExpired is caught
-- [X] T041 [US3] Add WARNING level log entry when timeout occurs with timeout duration and script details
-- [X] T042 [US3] Implement execution time measurement in execute() using time.perf_counter() before/after subprocess call
-- [X] T043 [US3] Add timeout property to ScriptExecutionResult to check if exit_code==124 and "Timeout" in stderr
-- [X] T044 [US3] Support custom timeout in SkillManager.execute_skill_script() that overrides default_script_timeout
-
-**Checkpoint**: Timeout enforcement working - long-running scripts killed after timeout, execution time measured and logged
+**Checkpoint**: Tool restriction tests removed - test suite should pass with ~200 fewer lines of test code (verify with `pytest -v`)
 
 ---
 
-## Phase 6: User Story 4 - Tool Restriction Enforcement for Scripts (Priority: P2)
+## Phase 4: Documentation Updates
 
-**Goal**: Enforce tool restrictions by checking if "Bash" is in skill's allowed-tools list before executing scripts
+**Purpose**: Remove all references to tool restriction enforcement from documentation
 
-**Independent Test**: Create two skills - one with allowed-tools: Bash (allowed) and one with allowed-tools: Read, Write (blocked) - verify script execution succeeds for first and raises ToolRestrictionError for second
+### Main Documentation Files
 
-### Implementation for User Story 4
+- [ ] T024 [P] Remove `ToolRestrictionError` example from README.md (lines 442, 456 per plan.md)
+- [ ] T025 [P] Remove "Tool restriction enforcement" from v0.3.0 feature list in CLAUDE.md
+- [ ] T026 [P] Update CLAUDE.md "Active Technologies" section to remove tool restriction references
+- [ ] T027 [P] Remove `ToolRestrictionError` import from examples/script_execution.py (line 26 per plan.md)
+- [ ] T028 [P] Remove `ToolRestrictionError` exception handler from examples/script_execution.py if present
 
-- [X] T045 [US4] Implement _check_tool_restrictions() method in ScriptExecutor to validate "Bash" is in skill_metadata.allowed_tools
-- [X] T046 [US4] Raise ToolRestrictionError in _check_tool_restrictions() if Bash not allowed (with skill name and allowed tools list in error message)
-- [X] T047 [US4] Call _check_tool_restrictions() in execute() before script execution (after path/permission validation)
-- [X] T048 [US4] Handle None/empty allowed_tools (no restrictions) by allowing all script executions
-- [X] T049 [US4] Add test fixture tests/fixtures/skills/restricted-skill/ with SKILL.md declaring allowed-tools without Bash
+### Spec Documents in specs/001-script-execution/
 
-**Checkpoint**: Tool restrictions enforced - scripts only execute if Bash in allowed-tools or no restrictions defined
+- [ ] T029 [P] Remove `ToolRestrictionError` reference from specs/001-script-execution/data-model.md (line 367 per plan.md)
+- [ ] T030 [P] Remove `ToolRestrictionError` reference from specs/001-script-execution/IMPLEMENTATION_GUIDE.md (line 665 per plan.md)
+- [ ] T031 [P] Remove `ToolRestrictionError` class definition from specs/001-script-execution/research-langchain-integration.md (line 588 per plan.md)
+- [ ] T032 [P] Search and remove tool restriction references from specs/001-script-execution/CROSS_PLATFORM_INDEX.md if any exist
 
----
+### Spec Document Verification
 
-## Phase 7: User Story 5 - Environment Context for Scripts (Priority: P2)
+- [ ] T033 Verify specs/001-script-execution/spec.md correctly shows FR-008 removed and "Out of Scope" section updated
+- [ ] T034 Verify specs/001-script-execution/plan.md reflects removal strategy (current plan.md is correct)
+- [ ] T035 Verify specs/001-script-execution/contracts/removal-api-contract.md documents the API changes correctly
 
-**Goal**: Inject skill metadata (name, base directory, version) into script environment for context-aware logging and file resolution
-
-**Independent Test**: Create script that prints environment variables (SKILL_NAME, SKILL_BASE_DIR, SKILL_VERSION, SKILLKIT_VERSION), verify all values correctly injected
-
-### Implementation for User Story 5
-
-- [X] T050 [US5] Ensure _build_environment() in ScriptExecutor injects SKILL_NAME from skill_metadata.name
-- [X] T051 [US5] Ensure _build_environment() in ScriptExecutor injects SKILL_BASE_DIR as absolute path string
-- [X] T052 [US5] Ensure _build_environment() in ScriptExecutor injects SKILL_VERSION from skill_metadata.version
-- [X] T053 [US5] Ensure _build_environment() in ScriptExecutor injects SKILLKIT_VERSION from skillkit.__version__
-- [X] T054 [US5] Merge injected environment with os.environ (preserve system PATH, HOME, etc.)
-- [X] T055 [US5] Update examples/script_execution.py to demonstrate environment variable usage in scripts
-
-**Checkpoint**: Environment context available - all scripts receive skill metadata via environment variables
+**Checkpoint**: Documentation cleaned - all references to enforcement removed (verify with `grep -ri "ToolRestrictionError" README.md CLAUDE.md examples/ specs/`)
 
 ---
 
-## Phase 8: User Story 6 - Automatic Script Detection (Priority: P3)
+## Phase 5: Regression Testing & Verification
 
-**Goal**: Automatically discover scripts in skill directories without manual registration
+**Purpose**: Ensure removal didn't break existing functionality
 
-**Independent Test**: Create skill with multiple scripts in different locations (scripts/, scripts/utils/, root), trigger detection via Skill.scripts property, verify all executable scripts found with correct metadata
+### Test Execution
 
-### Implementation for User Story 6
+- [ ] T036 Run full pytest suite to verify all tests pass: `pytest -v`
+- [ ] T037 Run pytest with coverage to verify ≥70% coverage maintained: `pytest --cov=src/skillkit --cov-report=term-missing`
+- [ ] T038 [P] Run async tests specifically: `pytest -m async -v`
+- [ ] T039 [P] Run integration tests specifically: `pytest -m integration -v`
 
-- [X] T056 [US6] Implement recursive scanning in _scan_directories() up to max_depth levels (default 5)
-- [X] T057 [US6] Exclude __pycache__, node_modules, .venv, venv directories in _is_executable_script()
-- [X] T058 [US6] Skip hidden files (starting with '.') in _is_executable_script()
-- [X] T059 [US6] Skip symlinks in _is_executable_script() to avoid confusion and duplicate detection
-- [X] T060 [US6] Ensure detection completes in <10ms for 50 scripts by benchmarking detect_scripts() performance
-- [X] T061 [US6] Add INFO level logging in detect_scripts() with script count summary: "Detected {count} scripts in skill '{skill_name}'"
-- [X] T062 [US6] Handle graceful degradation if individual script parsing fails (log warning, skip script, continue detection)
+### Code Quality Checks
 
-**Checkpoint**: Automatic detection working - all executable scripts found recursively, excluding hidden/cache files
+- [ ] T040 [P] Run ruff linting to verify no new issues: `ruff check src/skillkit`
+- [ ] T041 [P] Run ruff formatting check: `ruff format --check src/skillkit`
+- [ ] T042 [P] Run mypy type checking in strict mode: `mypy src/skillkit --strict`
 
----
+### Functional Validation
 
-## Phase 9: LangChain Integration (Cross-Story)
+- [ ] T043 [P] Run examples/basic_usage.py to verify core functionality: `python examples/basic_usage.py`
+- [ ] T044 [P] Run examples/script_execution.py to verify script execution: `python examples/script_execution.py`
+- [ ] T045 [P] Run examples/async_usage.py to verify async functionality: `python examples/async_usage.py`
+- [ ] T046 Manual test: Create skill with `allowed-tools: [Read, Write]` (no Bash) and verify script executes successfully without ToolRestrictionError
 
-**Goal**: Expose detected scripts as separate StructuredTools in LangChain integration with proper naming and error handling
-
-**Dependencies**: Requires US1 (script execution), US6 (detection)
-
-- [X] T063 [P] Define ScriptToolResult TypedDict in src/skillkit/integrations/langchain.py with type, tool_use_id, content, is_error fields
-- [X] T064 Implement create_script_tools() function in src/skillkit/integrations/langchain.py to iterate skill.scripts and create StructuredTool per script
-- [X] T065 Implement script tool wrapper function that calls SkillManager.execute_skill_script(), returns stdout on success, raises ToolException on failure
-- [X] T066 Set tool name to "{skill_name}.{script_name}" format (e.g., "pdf-extractor.extract")
-- [X] T067 Set tool description from script.description (extracted from first comment block) or empty string if no description
-- [X] T068 Define free-form JSON input schema for script tools (single field accepting any JSON structure)
-- [X] T069 Update to_langchain_tools() in LangChainSkillAdapter to call create_script_tools() and append to tools list
-- [X] T070 Preserve prompt-based tool alongside script tools if skill has prompt (skills can expose 1+N tools)
-- [X] T071 Update examples/langchain_agent.py to demonstrate script tool usage with LangChain agents
-
-**Checkpoint**: LangChain integration complete - each script exposed as separate tool, both sync and async supported
+**Checkpoint**: All tests pass (pytest should report fewer tests due to phase6 deletion), code quality verified, functionality intact
 
 ---
 
-## Phase 10: Testing & Validation (Optional Enhancement)
+## Phase 6: Backward Compatibility Verification
 
-**Purpose**: Comprehensive test coverage for all user stories (tests not explicitly requested in spec)
+**Purpose**: Ensure existing APIs continue to work (except for expected breaking change)
 
-**Note**: These tasks are optional enhancements to improve code quality and reliability
+### API Compatibility Tests
 
-- [X] T072 [P] Write unit tests in tests/test_script_detector.py for detecting Python, Shell, JavaScript, Ruby, Perl scripts
-- [X] T073 [P] Write unit tests in tests/test_script_detector.py for skipping non-script files (.json, .md), hidden files, __pycache__
-- [X] T074 [P] Write unit tests in tests/test_script_detector.py for nested directories up to max_depth
-- [X] T075 [P] Write unit tests in tests/test_script_detector.py for description extraction from docstrings, comments, JSDoc
-- [X] T076 [P] Write unit tests in tests/test_script_detector.py for empty description when no comments exist
-- [X] T077 [P] Write unit tests in tests/test_script_executor.py for successful execution (exit code 0)
-- [X] T078 [P] Write unit tests in tests/test_script_executor.py for failed execution (exit code 1)
-- [X] T079 [P] Write unit tests in tests/test_script_executor.py for timeout handling (exit code 124)
-- [X] T080 [P] Write unit tests in tests/test_script_executor.py for signal termination (SIGSEGV, SIGKILL)
-- [X] T081 [P] Write unit tests in tests/test_script_executor.py for path traversal prevention (../../etc/passwd)
-- [X] T082 [P] Write unit tests in tests/test_script_executor.py for symlink validation
-- [X] T083 [P] Write unit tests in tests/test_script_executor.py for permission checks (setuid/setgid)
-- [X] T084 [P] Write unit tests in tests/test_script_executor.py for output truncation at 10MB
-- [X] T085 [P] Write unit tests in tests/test_script_executor.py for environment variable injection
-- [X] T086 [P] Write integration tests in tests/test_manager.py for SkillManager.execute_skill_script()
-- [X] T087 [P] Write integration tests in tests/test_langchain.py for script tool creation and invocation
-- [X] T088 [P] Create test fixtures in tests/fixtures/skills/script-skill/scripts/ with Python, Shell, JavaScript test scripts
-- [X] T089 [P] Create test script that triggers timeout (infinite loop) in tests/fixtures/skills/script-skill/scripts/
-- [X] T090 [P] Create test script that reads JSON from stdin and writes to stdout in tests/fixtures/skills/script-skill/scripts/
-- [X] T091 Run pytest with coverage to verify 70%+ test coverage for script modules
+- [ ] T047 Verify `SkillMetadata.allowed_tools` field is still accessible: `python -c "from skillkit.core.models import SkillMetadata; print(hasattr(SkillMetadata, 'allowed_tools'))"`
+- [ ] T048 Verify `ScriptExecutor.execute()` method signature unchanged (check docstring, parameters)
+- [ ] T049 Verify YAML parsing of `allowed-tools` field continues to work (check test_parser.py tests pass)
+- [ ] T050 Verify LangChain tool creation works for skills with and without `allowed-tools` field
 
-**Checkpoint**: Test suite complete - 70%+ coverage, all user stories validated with unit and integration tests
+### Security Features Verification (MUST STILL WORK)
+
+- [ ] T051 [P] Verify PathSecurityError still works: `python -c "from skillkit.core.exceptions import PathSecurityError"`
+- [ ] T052 [P] Verify ScriptPermissionError still works: `python -c "from skillkit.core.exceptions import ScriptPermissionError"`
+- [ ] T053 [P] Verify InterpreterNotFoundError still works: `python -c "from skillkit.core.exceptions import InterpreterNotFoundError"`
+- [ ] T054 Verify path traversal prevention still blocks ../../etc/passwd attacks
+- [ ] T055 Verify setuid/setgid permission checks still reject dangerous scripts
+
+### Breaking Change Verification (EXPECTED)
+
+- [ ] T056 Verify `ToolRestrictionError` import fails with ImportError: `python -c "from skillkit.core.exceptions import ToolRestrictionError"` (should fail)
+- [ ] T057 Document that this is the ONLY expected breaking change
+
+**Checkpoint**: Backward compatibility verified except for documented `ToolRestrictionError` removal
 
 ---
 
-## Phase 11: Documentation & Examples
+## Phase 7: Final Polish & Commit
 
-**Purpose**: User-facing documentation and real-world examples
+**Purpose**: Clean up and prepare for PR/merge
 
-- [X] T092 [P] Implement working Python script in examples/skills/pdf-extractor/scripts/extract.py that demonstrates JSON stdin reading
-- [X] T093 [P] Implement working Shell script in examples/skills/pdf-extractor/scripts/convert.sh for format conversion example
-- [X] T094 [P] Write comprehensive example in examples/script_execution.py demonstrating: basic execution, error handling, timeout, environment variables
-- [X] T095 [P] Update README.md with Script Execution (v0.3+) section showing basic usage and LangChain integration
-- [X] T096 [P] Update CLAUDE.md with v0.3 status (In Progress → Released) and script execution feature summary
-- [ ] T097 [P] Update .docs/TECH_SPECS.md (if exists) with script execution architecture and design decisions
-- [ ] T098 [P] Add docstrings to all public methods in ScriptDetector, ScriptExecutor, and updated Skill/SkillManager classes
-- [ ] T099 Update quickstart.md validation: verify all examples run successfully, check performance targets met
+### Final Cleanup
 
-**Checkpoint**: Documentation complete - users can understand and use script execution feature via examples and docs
+- [ ] T058 [P] Search entire codebase for any missed "tool restriction" references: `grep -ri "tool.restriction" src/ tests/ examples/ README.md CLAUDE.md`
+- [ ] T059 [P] Search for any remaining `ToolRestrictionError` references: `grep -r "ToolRestrictionError" src/ tests/ examples/`
+- [ ] T060 [P] Search for any remaining `_check_tool_restrictions` references: `grep -r "_check_tool_restrictions" src/ tests/`
+- [ ] T061 Review git diff to ensure only intended changes are included: `git diff --stat` and `git diff`
 
----
+### Version & Changelog
 
-## Phase 12: Polish & Release Preparation
+- [ ] T062 Verify version in pyproject.toml remains 0.3.0 (this is a patch within 0.3.x, not a major bump)
+- [ ] T063 Verify version in src/skillkit/__init__.py remains 0.3.0
+- [ ] T064 Add changelog entry to README.md under v0.3.0 section: "Removed tool restriction enforcement while preserving allowed-tools field for backward compatibility"
+- [ ] T065 Update CLAUDE.md v0.3.0 description to clarify tool restriction enforcement removed
 
-**Purpose**: Final refinements before v0.3.0 release
+### Git Operations
 
-- [X] T100 [P] Run ruff check src/skillkit to verify linting passes
-- [X] T101 [P] Run ruff format src/skillkit to ensure consistent formatting
-- [X] T102 [P] Run mypy src/skillkit --strict to verify type checking passes
-- [X] T103 Review all error messages for clarity and consistency
-- [X] T104 Verify backward compatibility: all v0.1/v0.2 APIs work unchanged
-- [X] T105 Run performance benchmarks: script detection <10ms for 50 scripts, execution overhead <50ms
-- [X] T106 Security review: verify shell=False everywhere, path validation comprehensive, no shell interpolation
-- [X] T107 Update version to 0.3.0 in pyproject.toml and src/skillkit/__init__.py
-- [X] T108 Update CHANGELOG in README.md and CLAUDE.md with v0.3.0 features
-- [ ] T109 Create PR from 001-script-execution branch to main with comprehensive description
+- [ ] T066 Review all staged changes: `git status` and `git diff --cached`
+- [ ] T067 Create commit with descriptive message: `git commit -m "Remove tool restriction enforcement
 
-**Checkpoint**: v0.3.0 ready for release - all tests pass, documentation complete, security validated
+Remove ToolRestrictionError exception class and _check_tool_restrictions() method
+while preserving allowed-tools field in SkillMetadata for backward compatibility.
+
+- Remove src/skillkit/core/exceptions.py ToolRestrictionError class (lines 427-461)
+- Remove src/skillkit/core/scripts.py _check_tool_restrictions() method (lines 833-869)
+- Remove tests/test_script_executor_phase6.py (tool restriction tests)
+- Remove tests/fixtures/skills/restricted-skill/ test fixture
+- Update documentation to remove enforcement references
+- Scripts now execute regardless of allowed-tools value
+
+Breaking change: ToolRestrictionError import will fail (documented in contracts/)
+All other APIs remain backward compatible.
+
+Refs: specs/001-script-execution/plan.md, contracts/removal-api-contract.md"`
+- [ ] T068 Verify commit includes all intended changes: `git show --stat`
+- [ ] T069 Push to branch 001-script-execution: `git push origin 001-script-execution`
+
+**Checkpoint**: All changes committed and pushed - ready for PR or merge
 
 ---
 
@@ -274,158 +218,280 @@ description: "Task list for Script Execution Support feature"
 
 ### Phase Dependencies
 
-- **Setup (Phase 1)**: No dependencies - can start immediately
-- **Foundational (Phase 2)**: Depends on Setup completion - BLOCKS all user stories
-- **User Stories (Phases 3-8)**: All depend on Foundational phase completion
-  - User Story 1 (Phase 3): Core execution - BLOCKS all other user stories
-  - User Story 2 (Phase 4): Depends on US1 (extends security)
-  - User Story 3 (Phase 5): Depends on US1 (extends timeout handling)
-  - User Story 4 (Phase 6): Depends on US1 (extends tool restrictions)
-  - User Story 5 (Phase 7): Depends on US1 (extends environment injection)
-  - User Story 6 (Phase 8): Depends on US1 (detection complements execution)
-- **LangChain Integration (Phase 9)**: Depends on US1 + US6
-- **Testing (Phase 10)**: Can proceed in parallel with implementation (optional)
-- **Documentation (Phase 11)**: Depends on all user stories being complete
-- **Polish (Phase 12)**: Depends on all previous phases
+1. **Pre-Removal Analysis (Phase 1)**: No dependencies - can start immediately ✅
+2. **Core Code Removal (Phase 2)**: Depends on Phase 1 (need to know what to remove) ⏳
+3. **Test Removal (Phase 3)**: Depends on Phase 2 (tests reference removed code) ⏳
+4. **Documentation Updates (Phase 4)**: Can run in parallel with Phase 3 after Phase 2 complete 🔀
+5. **Regression Testing (Phase 5)**: Depends on Phases 2, 3, 4 completion (all changes done) ⏳
+6. **Backward Compatibility (Phase 6)**: Depends on Phase 5 (tests must pass first) ⏳
+7. **Final Polish (Phase 7)**: Depends on Phase 6 (final verification) ⏳
 
-### User Story Dependencies
+### Within Each Phase
 
-- **User Story 1 (P1)**: Can start after Foundational (Phase 2) - No dependencies on other stories - CORE FUNCTIONALITY
-- **User Story 2 (P1)**: Can start after US1 complete - Extends security validation
-- **User Story 3 (P1)**: Can start after US1 complete - Extends timeout handling
-- **User Story 4 (P2)**: Can start after US1 complete - Adds tool restriction checks
-- **User Story 5 (P2)**: Can start after US1 complete - Adds environment context
-- **User Story 6 (P3)**: Can start after US1 complete - Adds automatic detection
+**Phase 2 (Core Code Removal)**:
+- T006-T007: Exception removal (sequential, same file)
+- T008-T010: ScriptExecutor updates (sequential, same file)
+- T011-T013: Integration updates (can parallelize [P], different files)
+- T014-T015: Verification only (can parallelize [P])
 
-### Critical Path
+**Phase 3 (Test Removal)**:
+- T016-T017: File/directory deletion (can parallelize)
+- T018-T021: Test case removal (can parallelize [P], different files)
+- T022-T023: Verification only (can parallelize [P])
 
-The minimum implementation for a working MVP:
+**Phase 4 (Documentation)**:
+- T024-T028: Main docs (can parallelize [P], all different files)
+- T029-T032: Spec docs (can parallelize [P], all different files)
+- T033-T035: Verification only (sequential reading)
 
-1. Phase 1: Setup (T001-T007)
-2. Phase 2: Foundational (T008-T014)
-3. Phase 3: User Story 1 (T015-T033) ← CORE MVP
-4. Phase 9: LangChain Integration (T063-T071)
-5. Phase 11: Basic documentation (T092-T095)
+**Phase 5 (Testing)**:
+- T036-T037: pytest runs (sequential, observe results)
+- T038-T039: Specific test markers (can parallelize [P])
+- T040-T042: Code quality (can parallelize [P], different tools)
+- T043-T046: Functional tests (can parallelize [P], different scripts)
 
-This delivers the core value: scripts can be executed, results returned to agents via LangChain.
+**Phase 6 (Compatibility)**:
+- T047-T050: API tests (can parallelize)
+- T051-T055: Security tests (can parallelize [P])
+- T056-T057: Breaking change verification (sequential)
+
+**Phase 7 (Polish)**:
+- T058-T061: Final searches (can parallelize [P])
+- T062-T065: Version/changelog (sequential, related)
+- T066-T069: Git operations (MUST be sequential)
 
 ### Parallel Opportunities
 
-- **Setup phase**: All tasks T002-T007 marked [P] can run in parallel
-- **Foundational phase**: Tasks T009-T012, T014 marked [P] can run in parallel (T008, T013 are sequential)
-- **Within User Story 1**: Tasks T015-T016, T021 marked [P] can run in parallel (different components)
-- **Testing phase**: All test writing tasks T072-T090 marked [P] can run in parallel
-- **Documentation phase**: All doc tasks T092-T099 marked [P] can run in parallel
-- **Polish phase**: Tasks T100-T102 marked [P] can run in parallel
-
----
-
-## Parallel Example: User Story 1 Core Components
-
 ```bash
-# Launch foundational data models together:
-Task: T009 - Implement ScriptMetadata dataclass
-Task: T010 - Implement ScriptExecutionResult dataclass
-Task: T011 - Implement INTERPRETER_MAP constant
-Task: T012 - Add type aliases
+# Phase 2: Integration updates in parallel
+Task T011: Remove from langchain.py
+Task T012: Update langchain.py comments
+Task T013: Remove from __init__.py
 
-# Then launch core classes together:
-Task: T015 - Implement ScriptDescriptionExtractor class
-Task: T016 - Implement ScriptDetector class
-Task: T021 - Implement ScriptExecutor class __init__
+# Phase 3: Test file cleanup in parallel
+Task T016: Delete test_script_executor_phase6.py
+Task T017: Delete tests/fixtures/skills/restricted-skill/
+Task T019: Clean test_script_executor_phase3.py
+Task T020: Clean test_script_executor_phase4.py
+
+# Phase 4: All documentation updates in parallel (8 tasks)
+Task T024-T032: Update all doc files concurrently
+
+# Phase 5: Code quality checks in parallel
+Task T040: ruff check
+Task T041: ruff format
+Task T042: mypy
+
+Task T043-T046: Run all example scripts concurrently
+
+# Phase 6: Security verification in parallel
+Task T051-T055: Verify all security features work
+
+# Phase 7: Final searches in parallel
+Task T058-T060: Run all grep searches concurrently
 ```
 
 ---
 
 ## Implementation Strategy
 
-### MVP First (Minimum Viable Product)
+### Recommended Approach: Sequential by Phase
 
-**Scope**: User Story 1 + LangChain Integration only
+This is a **code removal** task, not a feature implementation. The safest approach:
 
-1. Complete Phase 1: Setup (T001-T007)
-2. Complete Phase 2: Foundational (T008-T014)
-3. Complete Phase 3: User Story 1 (T015-T033)
-4. Complete Phase 9: LangChain Integration (T063-T071)
-5. Add basic examples (T092-T095)
-6. **STOP and VALIDATE**: Test script execution end-to-end with LangChain agent
-7. Deploy/demo if ready
+1. **Phase 1** (30 min): Identify all references with grep searches
+2. **Phase 2** (1 hour): Remove core code systematically
+3. **Phase 3** (30 min): Delete test files and test cases
+4. **Phase 4** (1-1.5 hours): Update documentation (can parallelize tasks)
+5. **Phase 5** (1 hour): Run comprehensive tests and validation
+6. **Phase 6** (30 min): Verify backward compatibility
+7. **Phase 7** (30 min): Final cleanup, review, commit, push
 
-**Value Delivered**: Skills can execute scripts, pass arguments via JSON stdin, return results to agents. This is the core functionality that unblocks deterministic operations.
+**Total estimated time**: ~5-6 hours for thorough work, ~2-3 hours for experienced developers (per quickstart.md)
 
-### Incremental Delivery (Recommended)
+### Critical Path Tasks
 
-1. **Foundation** (Phases 1-2) → Data models and exceptions ready
-2. **MVP** (Phase 3 + Phase 9) → Core execution + LangChain → Deploy/Demo
-3. **Security Hardening** (Phase 4) → Path validation + security logging → Deploy/Demo
-4. **Reliability** (Phase 5) → Timeout enforcement → Deploy/Demo
-5. **Tool Restrictions** (Phase 6) → Enforcement → Deploy/Demo
-6. **Environment Context** (Phase 7) → Metadata injection → Deploy/Demo
-7. **Auto-Detection** (Phase 8) → Convenience feature → Deploy/Demo
-8. **Polish** (Phases 10-12) → Tests + docs + release → v0.3.0 Release
+These tasks MUST complete successfully (blocking):
 
-Each increment adds value without breaking previous functionality.
+1. **T008**: Remove `_check_tool_restrictions()` method (core change)
+2. **T009**: Remove method call in `execute()` (prevents runtime errors)
+3. **T016**: Delete phase6 test file (removes failing tests)
+4. **T036**: pytest passes (verification gate) ← CRITICAL CHECKPOINT
+5. **T046**: Manual functional test (verify scripts execute without restriction)
 
-### Parallel Team Strategy
+**If any critical path task fails, STOP and debug before proceeding.**
 
-With multiple developers after Foundation is complete:
+### Optimization: Parallel Documentation Updates
 
-- **Developer A**: User Story 1 core (Phase 3) - HIGHEST PRIORITY
-- **Developer B**: Testing infrastructure (Phase 10) - Parallel with implementation
-- **Developer C**: Examples and documentation (Phase 11) - Parallel with implementation
-
-Once US1 complete:
-
-- **Developer A**: Security (Phase 4) → Timeout (Phase 5)
-- **Developer B**: Tool Restrictions (Phase 6) → Environment (Phase 7)
-- **Developer C**: Auto-Detection (Phase 8) → LangChain Integration (Phase 9)
+Phase 4 has 12 tasks that can run in parallel:
+- Assign 3 tasks per developer for 4x speedup
+- Or use parallel grep + sed for bulk updates
 
 ---
 
-## Success Criteria Validation
+## Success Criteria
 
-After implementation, verify these measurable outcomes from spec.md:
+### Functional Success ✅
 
-- [ ] **SC-001**: Script execution overhead <50ms for 95% of executions (measure with benchmarks)
-- [ ] **SC-002**: 100% of path traversal attacks blocked (test with ../../etc/passwd, symlinks, etc.)
-- [ ] **SC-003**: Outputs up to 10MB captured completely; >10MB truncated with WARNING log
-- [ ] **SC-004**: Timeout enforcement within ±100ms of configured value
-- [ ] **SC-005**: 100% of executions logged with timestamp, skill, script, exit code, duration
-- [ ] **SC-006**: 100% of unauthorized script executions blocked when Bash not in allowed-tools
-- [ ] **SC-007**: Script detection <10ms for 95% of skills with ≤50 scripts
-- [ ] **SC-008**: Scripts execute successfully on Linux, macOS, Windows (test cross-platform)
-- [ ] **SC-009**: Zero crashes caused by script failures (all errors handled gracefully)
-- [ ] **SC-010**: Custom timeouts configurable from 1-600 seconds
+- [ ] All tests pass: `pytest -v` returns exit code 0
+- [ ] Coverage ≥70% maintained: `pytest --cov` shows coverage
+- [ ] Scripts execute regardless of `allowed-tools` value (manual test T046 passes)
+- [ ] No `ToolRestrictionError` references in src/, tests/, examples/: `grep -r "ToolRestrictionError" src/ tests/ examples/` returns empty
+
+### API Success ✅
+
+- [ ] `SkillMetadata.allowed_tools` field still accessible (T047 passes)
+- [ ] `ScriptExecutor.execute()` signature unchanged (T048 passes)
+- [ ] YAML parsing continues to work (T049 passes)
+- [ ] LangChain integration works (T050 passes)
+- [ ] All security features intact: PathSecurityError, ScriptPermissionError, etc. (T051-T055 pass)
+
+### Documentation Success ✅
+
+- [ ] README.md updated (no ToolRestrictionError references)
+- [ ] CLAUDE.md updated (v0.3.0 description reflects removal)
+- [ ] examples/script_execution.py updated (no ToolRestrictionError import)
+- [ ] All spec docs updated (data-model.md, IMPLEMENTATION_GUIDE.md, etc.)
+
+### Code Quality Success ✅
+
+- [ ] ruff linting passes: `ruff check src/skillkit` (T040)
+- [ ] ruff formatting passes: `ruff format --check src/skillkit` (T041)
+- [ ] mypy type checking passes: `mypy src/skillkit --strict` (T042)
+- [ ] No new warnings introduced
+
+### Breaking Change Documented ✅
+
+- [ ] `ToolRestrictionError` import fails as expected (T056)
+- [ ] Breaking change documented in contracts/removal-api-contract.md (T057)
+- [ ] Changelog updated (T064-T065)
+
+---
+
+## Risk Mitigation
+
+### Risk 1: Accidentally removing security features
+
+**Severity**: HIGH 🔴
+**Probability**: LOW (clear identification in plan.md)
+
+**Mitigation**:
+- T014-T015: Verify models.py and parser.py unchanged
+- T054-T055: Verify path validation and permission checks still work
+- T051-T053: Verify all other exceptions work
+- Phase 6 comprehensive security testing
+
+**Detection**: T046 manual test, T054-T055 security verification
+
+---
+
+### Risk 2: Breaking backward compatibility unintentionally
+
+**Severity**: HIGH 🔴
+**Probability**: LOW (only removing enforcement, not field)
+
+**Mitigation**:
+- T014: Verify `allowed_tools` field preserved in SkillMetadata
+- T022-T023: Verify field parsing tests unchanged
+- T047-T050: Comprehensive API compatibility tests
+- Phase 6 dedicated to compatibility verification
+
+**Detection**: T036-T037 pytest runs, Phase 6 tests
+
+---
+
+### Risk 3: Missing documentation references
+
+**Severity**: MEDIUM 🟡
+**Probability**: MEDIUM (many files to update)
+
+**Mitigation**:
+- T001-T004: Comprehensive grep searches before removal
+- T058-T060: Final verification searches after removal
+- T061: Git diff review
+- Phase 4 systematic documentation updates
+
+**Detection**: T058-T060 grep searches should return empty
+
+---
+
+### Risk 4: Test suite fails after removal
+
+**Severity**: HIGH 🔴
+**Probability**: LOW (test files clearly identified)
+
+**Mitigation**:
+- T016-T017: Delete entire phase6 test file (clean removal)
+- T018-T021: Remove specific test cases referencing ToolRestrictionError
+- T036-T039: Comprehensive pytest execution
+- Stop at Phase 5 checkpoint if any test fails
+
+**Detection**: T036 pytest run (critical checkpoint)
+
+---
+
+### Risk 5: Git merge conflicts
+
+**Severity**: LOW 🟢
+**Probability**: LOW (working on feature branch)
+
+**Mitigation**:
+- T005: Create backup before changes
+- T066-T068: Careful review of staged changes
+- Feature branch 001-script-execution isolated from main
+
+**Detection**: T066 git status review
 
 ---
 
 ## Notes
 
-- [P] tasks = different files/components, no dependencies, can run in parallel
-- [Story] label maps task to specific user story for traceability (US1, US2, US3, etc.)
-- Each user story should be independently completable and testable
-- Tests are optional (not explicitly requested in spec) but recommended for quality
-- Commit after each task or logical group of tasks
-- Stop at any checkpoint to validate story independently
-- Focus on MVP first (US1 + LangChain integration) before adding security/convenience features
-- Security is critical: never use shell=True, always validate paths, enforce timeouts
-- Backward compatibility: all v0.1/v0.2 APIs must continue working unchanged
-- gitignore file is already configured, do not check
+- This is a **code removal** feature, not a typical implementation - most tasks involve deleting code
+- The `allowed-tools` field is **preserved** for backward compatibility - NO changes to SkillMetadata or parser
+- **Only breaking change**: `ToolRestrictionError` import will fail - this is documented and expected
+- **Behavioral change**: Scripts execute without tool restriction checks - this is the goal
+- All security features (path validation, permission checks, timeout, output limits) remain fully intact
+- Test count will decrease by ~150 lines (phase6 file removal)
+- Estimated total time: 2-3 hours (experienced), 5-6 hours (thorough)
 
 ---
 
-## Estimated Timeline
+## Quickstart Integration
 
-Based on quickstart.md guidance:
+This tasks.md integrates with quickstart-removal-tool-restrictions.md:
 
-- **Phase 1-2 (Setup + Foundational)**: 1-2 days
-- **Phase 3 (User Story 1 - Core MVP)**: 2-3 days
-- **Phase 4-8 (Security + Enhancements)**: 3-4 days
-- **Phase 9 (LangChain Integration)**: 1 day
-- **Phase 10 (Testing)**: 2-3 days (parallel with implementation)
-- **Phase 11 (Documentation)**: 1-2 days
-- **Phase 12 (Polish)**: 1 day
+**Quickstart provides**:
+- Step-by-step implementation guide
+- Code examples for removal
+- Expected outcomes at each step
 
-**Total**: 5-7 days for full v0.3.0 implementation (as estimated in quickstart.md)
+**This tasks.md provides**:
+- Granular task breakdown (69 tasks)
+- Exact file paths and line numbers
+- Parallel execution opportunities
+- Success criteria and verification
 
-**MVP only**: 3-4 days (Phases 1-3 + Phase 9 + basic docs)
+**Usage**:
+1. Read quickstart.md for overview and approach
+2. Follow this tasks.md for detailed execution
+3. Reference plan.md for strategic context
+4. Check contracts/removal-api-contract.md for API impact
+
+---
+
+## Post-Implementation Checklist
+
+After completing all tasks, verify:
+
+- [ ] `grep -r "ToolRestrictionError" src/ tests/ examples/` returns zero results
+- [ ] `grep -r "_check_tool_restrictions" src/ tests/` returns zero results
+- [ ] `pytest -v` passes with no failures
+- [ ] `pytest --cov` shows ≥70% coverage
+- [ ] `ruff check src/skillkit` passes
+- [ ] `mypy src/skillkit --strict` passes
+- [ ] Manual test: Script executes with `allowed-tools: [Read]` (no Bash)
+- [ ] Git diff reviewed and commit message is clear
+- [ ] All documentation updated
+- [ ] Breaking change documented
+
+**Ready for**: PR creation or direct merge to main

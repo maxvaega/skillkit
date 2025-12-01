@@ -9,7 +9,6 @@ from skillkit.core.exceptions import (
     PathSecurityError,
     ScriptPermissionError,
     InterpreterNotFoundError,
-    ToolRestrictionError,
     ArgumentSizeError
 )
 
@@ -396,37 +395,6 @@ print(f"SKILLKIT_VERSION={os.environ.get('SKILLKIT_VERSION', 'MISSING')}")
 
         assert result.exit_code == 0
         assert "Allowed" in result.stdout
-
-    def test_tool_restriction_enforcement_bash_not_allowed(self, tmp_path):
-        """Test that scripts are blocked when Bash is not in allowed-tools."""
-        script_file = tmp_path / "blocked.py"
-        script_file.write_text('print("Blocked")')
-
-        # Create SKILL.md file (required by SkillMetadata)
-        skill_md = tmp_path / "SKILL.md"
-        skill_md.write_text("---\nname: test-skill\ndescription: Test skill\n---\n")
-
-        # Simulate skill metadata without Bash in allowed-tools
-        from skillkit.core.models import SkillMetadata
-        skill_metadata = SkillMetadata(
-            name="test-skill",
-            description="Test skill",
-            skill_path=tmp_path / "SKILL.md",
-            allowed_tools=["Read", "Write"]  # No Bash
-        )
-
-        executor = ScriptExecutor(timeout=5)
-
-        with pytest.raises(ToolRestrictionError) as exc_info:
-            executor.execute(
-                script_path=script_file,
-                arguments={},
-                skill_base_dir=tmp_path,
-                skill_metadata=skill_metadata
-            )
-
-        assert "Bash" in str(exc_info.value)
-        assert "test-skill" in str(exc_info.value)
 
     def test_tool_restriction_none_allows_all(self, tmp_path):
         """Test that None/empty allowed_tools allows all scripts."""

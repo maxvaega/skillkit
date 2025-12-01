@@ -6,7 +6,7 @@
 - SKILL.md parsing with YAML frontmatter validation
 - Progressive disclosure pattern (metadata loading → on-demand content)
 - Framework integrations (LangChain, LlamaIndex, CrewAI, Haystack, Google ADK)
-- Security features (tool restrictions, path traversal prevention)
+- Security features (path traversal prevention, permission checks)
 - Model-agnostic design supporting Claude, GPT, Gemini, and open-source LLMs
 
 ## Development Approach
@@ -15,7 +15,7 @@ This project follows a **Vertical Slice MVP strategy** to deliver working functi
 
 - **v0.1 (Released)**: Core functionality + LangChain integration (sync only)
 - **v0.2 (Released)**: Async support + multi-source discovery + plugin integration
-- **v0.3 (Released)**: Script execution + tool restriction enforcement
+- **v0.3 (Released)**: Script execution with security controls
 - **v1.0 (Planned)**: Additional framework integrations + production polish + comprehensive documentation + 90% test coverage
 
 ### Current Focus (v0.3)
@@ -24,10 +24,9 @@ The v0.3 release enables deterministic code execution with comprehensive securit
 
 1. **Script Execution**: Execute Python, Shell, JavaScript, Ruby, and Perl scripts from skills
 2. **Security Controls**: Path traversal prevention, permission checks (setuid/setgid), timeout enforcement
-3. **Tool Restrictions**: Enforce "Bash" in allowed-tools for script execution
-4. **Environment Injection**: Automatic SKILL_NAME, SKILL_BASE_DIR, SKILL_VERSION, SKILLKIT_VERSION variables
-5. **Automatic Detection**: Scripts discovered recursively in skill directories
-6. **LangChain Integration**: Each script exposed as separate StructuredTool (`{skill-name}.{script-name}`)
+3. **Environment Injection**: Automatic SKILL_NAME, SKILL_BASE_DIR, SKILL_VERSION, SKILLKIT_VERSION variables
+4. **Automatic Detection**: Scripts discovered recursively in skill directories
+5. **LangChain Integration**: Each script exposed as separate StructuredTool (`{skill-name}.{script-name}`)
 7. **Robust Error Handling**: Comprehensive exception hierarchy for script-related errors
 8. **Audit Logging**: All script executions logged with metadata
 9. **Cross-Platform Support**: Works on Linux, macOS, and Windows
@@ -130,7 +129,6 @@ This project was developed using speckit method. all development phases have bee
 **v0.3 Completed**:
 - ✅ Script execution (Python, Shell, JavaScript, Ruby, Perl)
 - ✅ Security controls (path validation, permission checks, timeout enforcement)
-- ✅ Tool restriction enforcement (requires "Bash" in allowed-tools)
 - ✅ Environment variable injection (SKILL_NAME, SKILL_BASE_DIR, SKILL_VERSION, SKILLKIT_VERSION)
 - ✅ Automatic script detection (recursive, up to 5 levels)
 - ✅ LangChain script tool integration
@@ -138,7 +136,7 @@ This project was developed using speckit method. all development phases have bee
 - ✅ Test fixtures and test infrastructure
 - ✅ Example skills with scripts (pdf-extractor)
 - ✅ Updated documentation (README.md, CLAUDE.md)
-- ✅ Backward compatible with v0.1/v0.2
+- ✅ Backward compatible with v0.1/v0.2 (except ToolRestrictionError removed)
 
 **Next Steps**:
 - ✅ Run comprehensive test suite and verify coverage
@@ -260,14 +258,14 @@ skillkit/
 ### v0.3.0 (Released)
 - **Script Execution**: Execute Python, Shell, JavaScript, Ruby, and Perl scripts from skills
 - **Security Controls**: Path traversal prevention, permission checks (setuid/setgid), timeout enforcement
-- **Tool Restrictions**: Enforce "Bash" in allowed-tools for script execution
 - **Environment Injection**: Automatic SKILL_NAME, SKILL_BASE_DIR, SKILL_VERSION, SKILLKIT_VERSION variables
 - **Automatic Detection**: Scripts discovered recursively in skill directories
 - **LangChain Integration**: Each script exposed as separate StructuredTool (`{skill-name}.{script-name}`)
 - **Robust Error Handling**: Comprehensive exception hierarchy for script-related errors
 - **Audit Logging**: All script executions logged with metadata
 - **Cross-Platform**: Works on Linux, macOS, and Windows
-- **Backward Compatible**: All v0.1/v0.2 APIs remain unchanged
+- **Backward Compatible**: All v0.1/v0.2 APIs remain unchanged (except `ToolRestrictionError` removed)
+- **Note**: Tool restriction enforcement removed while preserving `allowed-tools` field for backward compatibility
 
 ### v0.2.0 (Released)
 - **Async Support**: Full async/await implementation with `adiscover()` and `ainvoke_skill()`

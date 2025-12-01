@@ -4,8 +4,6 @@ This module defines all custom exceptions used throughout the library,
 following a hierarchical structure for granular error handling.
 """
 
-from typing import List
-
 
 class SkillsUseError(Exception):
     """Base exception for all skillkit errors.
@@ -424,37 +422,3 @@ class ArgumentSizeError(ScriptError):
         self.max_bytes = max_bytes
 
 
-class ToolRestrictionError(SkillSecurityError):
-    """Raised when tool restrictions prevent script execution.
-
-    This exception is raised when a skill's allowed-tools list does not
-    include 'Bash', which is required for script execution.
-
-    Attributes:
-        skill_name: Name of the skill with tool restrictions
-        allowed_tools: List of allowed tools (may be empty)
-
-    Example:
-        >>> raise ToolRestrictionError(
-        ...     "Script execution requires 'Bash' in allowed-tools",
-        ...     skill_name='pdf-extractor',
-        ...     allowed_tools=['Read', 'Write']
-        ... )
-    """
-
-    def __init__(
-        self,
-        message: str,
-        skill_name: str | None = None,
-        allowed_tools: List[str] | None = None,
-    ) -> None:
-        """Initialize ToolRestrictionError with details.
-
-        Args:
-            message: Error description
-            skill_name: Name of the skill
-            allowed_tools: List of allowed tools
-        """
-        super().__init__(message)
-        self.skill_name = skill_name
-        self.allowed_tools = allowed_tools or []

@@ -5,7 +5,6 @@ This example demonstrates:
 2. Environment variable injection (SKILL_NAME, SKILL_BASE_DIR, SKILL_VERSION, SKILLKIT_VERSION)
 3. Error handling for script failures
 4. Timeout management
-5. Tool restriction enforcement
 
 Prerequisites:
     - skillkit v0.3.0+
@@ -23,7 +22,6 @@ from pathlib import Path
 from skillkit import SkillManager
 from skillkit.core.exceptions import (
     ScriptNotFoundError,
-    ToolRestrictionError,
     InterpreterNotFoundError,
 )
 
