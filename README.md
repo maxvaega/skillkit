@@ -621,6 +621,7 @@ python examples/file_references.py
 - ✅ Security controls (path validation, permission checks, timeout enforcement)
 - ✅ Environment variable injection (SKILL_NAME, SKILL_BASE_DIR, SKILL_VERSION, SKILLKIT_VERSION)
 - ✅ LangChain script tool integration (each script exposed as separate StructuredTool)
+- ✅ Parameters normalization to lower-case
 - ✅ Comprehensive error handling and audit logging
 - ✅ Cross-platform support (Linux, macOS, Windows)
 - ✅ Backward compatible with v0.1/v0.2 (except ToolRestrictionError removed)
