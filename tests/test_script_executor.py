@@ -492,6 +492,8 @@ print("Done")
         import sys
         if sys.platform == 'win32':
             pytest.skip("Signal test not applicable on Windows")
+        if sys.platform == 'darwin':
+            pytest.skip("Signal test triggers macOS crash reporter - skipping to avoid disruption")
 
         # Create a script that causes segmentation fault
         script_file = tmp_path / "segfault.py"
