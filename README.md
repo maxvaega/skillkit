@@ -629,7 +629,7 @@ python examples/file_references.py
 ### v0.4 (In progress)
 - Advanced arguments schemas for scripts
 - Skill versioning and compatibility checks
-- Improved progressive disclosure 
+- Improved progressive disclosure
 
 ### v0.5 (Planned)
 - Additional framework integrations (LlamaIndex, CrewAI, Haystack)
