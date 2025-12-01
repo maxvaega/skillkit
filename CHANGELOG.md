@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2025-12-02
+- fixed `SKILL_VERSION` environment variable not working as expected 
+
+## [0.3.0] - 2025-12-01
+- Script Execution Support (Python, Shell, JavaScript, Ruby, Perl)
+- Automatic script detection (recursive, up to 5 levels)
+- Security controls (path validation, permission checks, timeout enforcement)
+- Environment variable injection (SKILL_NAME, SKILL_BASE_DIR, SKILL_VERSION, SKILLKIT_VERSION)
+- LangChain script tool integration (each script exposed as separate StructuredTool)
+- Parameters normalization to lower-case
+- Comprehensive error handling and audit logging
+- Cross-platform support (Linux, macOS, Windows)
+
 ## [0.2.0] - 2025-11-15
 
 ### Added

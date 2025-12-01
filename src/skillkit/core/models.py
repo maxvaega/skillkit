@@ -70,12 +70,14 @@ class SkillMetadata:
         description: Human-readable description of skill purpose
         skill_path: Absolute path to SKILL.md file
         allowed_tools: Tool names allowed for this skill (optional, not enforced in v0.1)
+        version: Skill version string (optional, defaults to None if not specified in SKILL.md)
     """
 
     name: str
     description: str
     skill_path: Path
     allowed_tools: tuple[str, ...] = field(default_factory=tuple)
+    version: str | None = None
 
     def __post_init__(self) -> None:
         """Validate skill path exists on construction.

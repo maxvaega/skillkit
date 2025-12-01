@@ -156,3 +156,56 @@ def test_parse_invalid_skills(fixtures_dir, fixture_name, expected_exception, ex
     # For missing field errors, validate field_name attribute
     if expected_field is not None:
         assert exc_info.value.field_name == expected_field
+
+
+# Version parsing tests (v0.3+)
+def test_parse_valid_skill_with_version(fixtures_dir):
+    """Validate version field extraction when present in SKILL.md.
+
+    Tests that the parser correctly extracts the version field from
+    SKILL.md frontmatter and includes it in the metadata.
+    """
+    parser = SkillParser()
+    skill_path = fixtures_dir / "valid-with-version" / "SKILL.md"
+
+    metadata = parser.parse_skill_file(skill_path)
+
+    assert metadata.name == "valid-with-version"
+    assert metadata.description is not None
+    assert metadata.version == "1.0.0"
+
+
+def test_parse_skill_without_version_returns_none(fixtures_dir):
+    """Validate version defaults to None when not specified in SKILL.md.
+
+    Tests that the parser sets version to None when the version field
+    is absent from the SKILL.md frontmatter.
+    """
+    parser = SkillParser()
+    skill_path = fixtures_dir / "valid-basic" / "SKILL.md"
+
+    metadata = parser.parse_skill_file(skill_path)
+
+    assert metadata.name == "valid-basic"
+    assert metadata.description is not None
+    assert metadata.version is None
+
+
+def test_parse_skill_with_invalid_version_type_returns_none(fixtures_dir, caplog):
+    """Validate non-string version values return None with warning.
+
+    Tests that the parser handles non-string version values gracefully
+    by logging a warning and returning None.
+    """
+    parser = SkillParser()
+    skill_path = fixtures_dir / "invalid-version-type" / "SKILL.md"
+
+    metadata = parser.parse_skill_file(skill_path)
+
+    assert metadata.name == "invalid-version-type"
+    assert metadata.description is not None
+    assert metadata.version is None
+
+    # Verify warning was logged
+    assert any("version" in record.message.lower() and "string" in record.message.lower()
+               for record in caplog.records)
