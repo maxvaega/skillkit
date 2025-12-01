@@ -286,8 +286,6 @@ def create_script_tools(skill: "Skill", manager: "SkillManager") -> List[Structu
             skill_name: str = skill.metadata.name,
             script_name: str = script.name,
         ) -> str:
-            if arguments is None:
-                arguments = {}
             """Sync script execution wrapper for sync agents.
 
             Args:
@@ -301,6 +299,8 @@ def create_script_tools(skill: "Skill", manager: "SkillManager") -> List[Structu
             Raises:
                 ToolException: If script execution fails (exit_code!=0)
             """
+            if arguments is None:
+                arguments = {}
             try:
                 result = manager.execute_skill_script(
                     skill_name=skill_name,
@@ -335,8 +335,6 @@ def create_script_tools(skill: "Skill", manager: "SkillManager") -> List[Structu
             skill_name: str = skill.metadata.name,
             script_name: str = script.name,
         ) -> str:
-            if arguments is None:
-                arguments = {}
             """Async script execution wrapper for async agents.
 
             Args:
@@ -350,6 +348,8 @@ def create_script_tools(skill: "Skill", manager: "SkillManager") -> List[Structu
             Raises:
                 ToolException: If script execution fails (exit_code!=0)
             """
+            if arguments is None:
+                arguments = {}
             # Note: execute_skill_script is not async, so we use sync version
             # Future v0.3.1+ could add aexecute_skill_script for true async
             try:
