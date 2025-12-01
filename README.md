@@ -17,8 +17,6 @@ skillkit is compatible with existings skills (SKILL.md), so you can browse and u
     <img src="https://img.shields.io/github/stars/maxvaega/skillkit" /></a>
 </p>
 
----
-
 <div align="center">
 <img src="https://i.imgflip.com/addac0.jpg" title="skillkit for developers" width=370px height=250px/>
 </div>
@@ -355,7 +353,11 @@ my-skill/
 
 ### Script Input/Output
 
-Scripts receive arguments as JSON via stdin and should output results to stdout:
+Scripts receive arguments as JSON via stdin and should output results to stdout.
+
+**Important**: All parameter names are **automatically normalized to lowercase** by the core `execute_skill_script` method. This ensures consistent handling across all framework integrations (LangChain, LlamaIndex, CrewAI, etc.), regardless of how LLMs or developers capitalize parameter names.
+
+**Best Practice**: Always use lowercase parameter names in your scripts:
 
 ```python
 #!/usr/bin/env python3
@@ -366,12 +368,18 @@ import json
 # Read arguments from stdin
 args = json.load(sys.stdin)
 
+# ✅ Use lowercase parameter names for compatibility
+file_path = args.get('file_path', 'document.pdf')
+page_range = args.get('page_range', 'all')
+
 # Process data
 result = {"extracted_text": "..."}
 
 # Output JSON to stdout
 print(json.dumps(result))
 ```
+
+**Example**: If an LLM generates `{'File_Path': 'doc.pdf', 'Page_Range': '1-5'}`, skillkit automatically converts it to `{'file_path': 'doc.pdf', 'page_range': '1-5'}` before passing to your script. This normalization happens in the core manager, benefiting all framework integrations.
 
 ### Environment Variables
 
@@ -617,12 +625,19 @@ python examples/file_references.py
 - ✅ Cross-platform support (Linux, macOS, Windows)
 - ✅ Backward compatible with v0.1/v0.2 (except ToolRestrictionError removed)
 
-### v0.4 (Planned)
-- Additional framework integrations (LlamaIndex, CrewAI, Haystack)
+### v0.4 (In progress)
 - Advanced arguments schemas for scripts
 - Skill versioning and compatibility checks
+- Improved progressive disclosure 
+
+### v0.5 (Planned)
+- Additional framework integrations (LlamaIndex, CrewAI, Haystack)
+
+### v0.6 (Planned)
+- Scripts permissions enforcement
 - Enhanced error handling and recovery
 - Performance optimizations
+- Skill name enforcement and controls
 
 ### v1.0 (Planned)
 - Comprehensive documentation

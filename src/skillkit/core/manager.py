@@ -1001,12 +1001,17 @@ class SkillManager:
         # Use provided timeout or fallback to default
         effective_timeout = timeout if timeout is not None else self.default_script_timeout
 
+        # Normalize argument keys to lowercase for case-insensitive matching
+        # This ensures scripts receive predictable parameter names regardless
+        # of how framework integrations or LLMs capitalize them
+        normalized_arguments = {k.lower(): v for k, v in arguments.items()}
+
         # Create executor and execute script
         executor = ScriptExecutor(timeout=effective_timeout)
 
         return executor.execute(
             script_path=script_metadata.path,
-            arguments=arguments,
+            arguments=normalized_arguments,
             skill_base_dir=skill.base_directory,
             skill_metadata=skill.metadata,
         )
