@@ -20,11 +20,11 @@
 
 **Purpose**: Identify all references to tool restrictions before removal
 
-- [ ] T001 Search for all occurrences of `ToolRestrictionError` in codebase using grep: `grep -r "ToolRestrictionError" src/ tests/ examples/`
-- [ ] T002 Search for all occurrences of `_check_tool_restrictions` in codebase using grep: `grep -r "_check_tool_restrictions" src/ tests/`
-- [ ] T003 Search for all occurrences of "tool restriction" in documentation files using grep: `grep -r "tool restriction" README.md CLAUDE.md .docs/ specs/`
-- [ ] T004 Search for all test files containing tool restriction tests using grep: `grep -r "test.*tool.*restriction" tests/`
-- [ ] T005 Create backup of current branch state: `git stash` or `git branch backup-before-removal`
+- [X] T001 Search for all occurrences of `ToolRestrictionError` in codebase using grep: `grep -r "ToolRestrictionError" src/ tests/ examples/`
+- [X] T002 Search for all occurrences of `_check_tool_restrictions` in codebase using grep: `grep -r "_check_tool_restrictions" src/ tests/`
+- [X] T003 Search for all occurrences of "tool restriction" in documentation files using grep: `grep -r "tool restriction" README.md CLAUDE.md .docs/ specs/`
+- [X] T004 Search for all test files containing tool restriction tests using grep: `grep -r "test.*tool.*restriction" tests/`
+- [X] T005 Create backup of current branch state: `git stash` or `git branch backup-before-removal`
 
 **Checkpoint**: All references identified (expect ~8 source file references, ~15 test file references, ~10 doc references) - ready for systematic removal
 
@@ -36,25 +36,25 @@
 
 ### Exception Class Removal
 
-- [ ] T006 Remove `ToolRestrictionError` exception class definition from src/skillkit/core/exceptions.py (lines 427-461 per plan.md)
-- [ ] T007 Remove `ToolRestrictionError` from `__all__` export list in src/skillkit/core/exceptions.py if present
+- [X] T006 Remove `ToolRestrictionError` exception class definition from src/skillkit/core/exceptions.py (lines 427-461 per plan.md)
+- [X] T007 Remove `ToolRestrictionError` from `__all__` export list in src/skillkit/core/exceptions.py if present
 
 ### ScriptExecutor Method Removal
 
-- [ ] T008 Remove `_check_tool_restrictions()` private method from src/skillkit/core/scripts.py (lines 833-869 per plan.md)
-- [ ] T009 Remove call to `self._check_tool_restrictions()` in `execute()` method in src/skillkit/core/scripts.py (line 1134 per plan.md)
-- [ ] T010 Update docstring for `execute()` method to remove `ToolRestrictionError` from "Raises" section in src/skillkit/core/scripts.py
+- [X] T008 Remove `_check_tool_restrictions()` private method from src/skillkit/core/scripts.py (lines 833-869 per plan.md)
+- [X] T009 Remove call to `self._check_tool_restrictions()` in `execute()` method in src/skillkit/core/scripts.py (line 1134 per plan.md)
+- [X] T010 Update docstring for `execute()` method to remove `ToolRestrictionError` from "Raises" section in src/skillkit/core/scripts.py
 
 ### Integration Updates
 
-- [ ] T011 [P] Remove `ToolRestrictionError` from import statement in src/skillkit/integrations/langchain.py
-- [ ] T012 [P] Remove or update comment mentioning `ToolRestrictionError` in exception handling in src/skillkit/integrations/langchain.py (line 330 per plan.md)
-- [ ] T013 [P] Remove `ToolRestrictionError` from exports in src/skillkit/__init__.py if present
+- [X] T011 [P] Remove `ToolRestrictionError` from import statement in src/skillkit/integrations/langchain.py
+- [X] T012 [P] Remove or update comment mentioning `ToolRestrictionError` in exception handling in src/skillkit/integrations/langchain.py (line 330 per plan.md)
+- [X] T013 [P] Remove `ToolRestrictionError` from exports in src/skillkit/__init__.py if present
 
 ### Model Verification (NO CHANGES)
 
-- [ ] T014 Verify `allowed_tools` field remains in SkillMetadata in src/skillkit/core/models.py (should see NO changes to this file)
-- [ ] T015 Verify parser.py still parses `allowed-tools` from YAML (should see NO changes to src/skillkit/core/parser.py)
+- [X] T014 Verify `allowed_tools` field remains in SkillMetadata in src/skillkit/core/models.py (should see NO changes to this file)
+- [X] T015 Verify parser.py still parses `allowed-tools` from YAML (should see NO changes to src/skillkit/core/parser.py)
 
 **Checkpoint**: Core enforcement code removed - scripts now execute without tool restriction checks (verify with `grep -r "ToolRestrictionError" src/`)
 
@@ -66,20 +66,20 @@
 
 ### Test File Deletion
 
-- [ ] T016 Delete entire test file tests/test_script_executor_phase6.py (150+ lines testing tool restrictions per plan.md)
-- [ ] T017 Delete test fixture directory tests/fixtures/skills/restricted-skill/ (tool restriction test fixture per plan.md)
+- [X] T016 Delete entire test file tests/test_script_executor_phase6.py (150+ lines testing tool restrictions per plan.md)
+- [X] T017 Delete test fixture directory tests/fixtures/skills/restricted-skill/ (tool restriction test fixture per plan.md)
 
 ### Test Case Removal from Existing Files
 
-- [ ] T018 Remove `ToolRestrictionError` test case from tests/test_script_executor.py (around line 420 per plan.md)
-- [ ] T019 [P] Search and remove any `ToolRestrictionError` references from tests/test_script_executor_phase3.py
-- [ ] T020 [P] Search and remove any `ToolRestrictionError` references from tests/test_script_executor_phase4.py
-- [ ] T021 [P] Search and remove any `ToolRestrictionError` import statements from all test files
+- [X] T018 Remove `ToolRestrictionError` test case from tests/test_script_executor.py (around line 420 per plan.md)
+- [X] T019 [P] Search and remove any `ToolRestrictionError` references from tests/test_script_executor_phase3.py
+- [X] T020 [P] Search and remove any `ToolRestrictionError` references from tests/test_script_executor_phase4.py
+- [X] T021 [P] Search and remove any `ToolRestrictionError` import statements from all test files
 
 ### Backward Compatibility Tests (KEEP THESE - NO CHANGES)
 
-- [ ] T022 Verify tests for `allowed_tools` field parsing in tests/test_parser.py remain unchanged (grep should find no changes)
-- [ ] T023 Verify tests for `allowed_tools` field in SkillMetadata in tests/test_models.py remain unchanged (grep should find no changes)
+- [X] T022 Verify tests for `allowed_tools` field parsing in tests/test_parser.py remain unchanged (grep should find no changes)
+- [X] T023 Verify tests for `allowed_tools` field in SkillMetadata in tests/test_models.py remain unchanged (grep should find no changes)
 
 **Checkpoint**: Tool restriction tests removed - test suite should pass with ~200 fewer lines of test code (verify with `pytest -v`)
 
@@ -91,24 +91,24 @@
 
 ### Main Documentation Files
 
-- [ ] T024 [P] Remove `ToolRestrictionError` example from README.md (lines 442, 456 per plan.md)
-- [ ] T025 [P] Remove "Tool restriction enforcement" from v0.3.0 feature list in CLAUDE.md
-- [ ] T026 [P] Update CLAUDE.md "Active Technologies" section to remove tool restriction references
-- [ ] T027 [P] Remove `ToolRestrictionError` import from examples/script_execution.py (line 26 per plan.md)
-- [ ] T028 [P] Remove `ToolRestrictionError` exception handler from examples/script_execution.py if present
+- [X] T024 [P] Remove `ToolRestrictionError` example from README.md (lines 442, 456 per plan.md)
+- [X] T025 [P] Remove "Tool restriction enforcement" from v0.3.0 feature list in CLAUDE.md
+- [X] T026 [P] Update CLAUDE.md "Active Technologies" section to remove tool restriction references
+- [X] T027 [P] Remove `ToolRestrictionError` import from examples/script_execution.py (line 26 per plan.md)
+- [X] T028 [P] Remove `ToolRestrictionError` exception handler from examples/script_execution.py if present
 
 ### Spec Documents in specs/001-script-execution/
 
-- [ ] T029 [P] Remove `ToolRestrictionError` reference from specs/001-script-execution/data-model.md (line 367 per plan.md)
-- [ ] T030 [P] Remove `ToolRestrictionError` reference from specs/001-script-execution/IMPLEMENTATION_GUIDE.md (line 665 per plan.md)
-- [ ] T031 [P] Remove `ToolRestrictionError` class definition from specs/001-script-execution/research-langchain-integration.md (line 588 per plan.md)
-- [ ] T032 [P] Search and remove tool restriction references from specs/001-script-execution/CROSS_PLATFORM_INDEX.md if any exist
+- [X] T029 [P] Remove `ToolRestrictionError` reference from specs/001-script-execution/data-model.md (line 367 per plan.md)
+- [X] T030 [P] Remove `ToolRestrictionError` reference from specs/001-script-execution/IMPLEMENTATION_GUIDE.md (line 665 per plan.md)
+- [X] T031 [P] Remove `ToolRestrictionError` class definition from specs/001-script-execution/research-langchain-integration.md (line 588 per plan.md)
+- [X] T032 [P] Search and remove tool restriction references from specs/001-script-execution/CROSS_PLATFORM_INDEX.md if any exist
 
 ### Spec Document Verification
 
-- [ ] T033 Verify specs/001-script-execution/spec.md correctly shows FR-008 removed and "Out of Scope" section updated
-- [ ] T034 Verify specs/001-script-execution/plan.md reflects removal strategy (current plan.md is correct)
-- [ ] T035 Verify specs/001-script-execution/contracts/removal-api-contract.md documents the API changes correctly
+- [X] T033 Verify specs/001-script-execution/spec.md correctly shows FR-008 removed and "Out of Scope" section updated
+- [X] T034 Verify specs/001-script-execution/plan.md reflects removal strategy (current plan.md is correct)
+- [X] T035 Verify specs/001-script-execution/contracts/removal-api-contract.md documents the API changes correctly
 
 **Checkpoint**: Documentation cleaned - all references to enforcement removed (verify with `grep -ri "ToolRestrictionError" README.md CLAUDE.md examples/ specs/`)
 
@@ -120,23 +120,23 @@
 
 ### Test Execution
 
-- [ ] T036 Run full pytest suite to verify all tests pass: `pytest -v`
-- [ ] T037 Run pytest with coverage to verify ≥70% coverage maintained: `pytest --cov=src/skillkit --cov-report=term-missing`
-- [ ] T038 [P] Run async tests specifically: `pytest -m async -v`
-- [ ] T039 [P] Run integration tests specifically: `pytest -m integration -v`
+- [X] T036 Run full pytest suite to verify all tests pass: `pytest -v`
+- [X] T037 Run pytest with coverage to verify ≥70% coverage maintained: `pytest --cov=src/skillkit --cov-report=term-missing`
+- [X] T038 [P] Run async tests specifically: `pytest -m async -v`
+- [X] T039 [P] Run integration tests specifically: `pytest -m integration -v`
 
 ### Code Quality Checks
 
-- [ ] T040 [P] Run ruff linting to verify no new issues: `ruff check src/skillkit`
-- [ ] T041 [P] Run ruff formatting check: `ruff format --check src/skillkit`
-- [ ] T042 [P] Run mypy type checking in strict mode: `mypy src/skillkit --strict`
+- [X] T040 [P] Run ruff linting to verify no new issues: `ruff check src/skillkit`
+- [X] T041 [P] Run ruff formatting check: `ruff format --check src/skillkit`
+- [X] T042 [P] Run mypy type checking in strict mode: `mypy src/skillkit --strict`
 
 ### Functional Validation
 
-- [ ] T043 [P] Run examples/basic_usage.py to verify core functionality: `python examples/basic_usage.py`
-- [ ] T044 [P] Run examples/script_execution.py to verify script execution: `python examples/script_execution.py`
-- [ ] T045 [P] Run examples/async_usage.py to verify async functionality: `python examples/async_usage.py`
-- [ ] T046 Manual test: Create skill with `allowed-tools: [Read, Write]` (no Bash) and verify script executes successfully without ToolRestrictionError
+- [X] T043 [P] Run examples/basic_usage.py to verify core functionality: `python examples/basic_usage.py`
+- [X] T044 [P] Run examples/script_execution.py to verify script execution: `python examples/script_execution.py`
+- [X] T045 [P] Run examples/async_usage.py to verify async functionality: `python examples/async_usage.py`
+- [X] T046 Manual test: Create skill with `allowed-tools: [Read, Write]` (no Bash) and verify script executes successfully without ToolRestrictionError
 
 **Checkpoint**: All tests pass (pytest should report fewer tests due to phase6 deletion), code quality verified, functionality intact
 
@@ -148,23 +148,23 @@
 
 ### API Compatibility Tests
 
-- [ ] T047 Verify `SkillMetadata.allowed_tools` field is still accessible: `python -c "from skillkit.core.models import SkillMetadata; print(hasattr(SkillMetadata, 'allowed_tools'))"`
-- [ ] T048 Verify `ScriptExecutor.execute()` method signature unchanged (check docstring, parameters)
-- [ ] T049 Verify YAML parsing of `allowed-tools` field continues to work (check test_parser.py tests pass)
-- [ ] T050 Verify LangChain tool creation works for skills with and without `allowed-tools` field
+- [X] T047 Verify `SkillMetadata.allowed_tools` field is still accessible: `python -c "from skillkit.core.models import SkillMetadata; print(hasattr(SkillMetadata, 'allowed_tools'))"`
+- [X] T048 Verify `ScriptExecutor.execute()` method signature unchanged (check docstring, parameters)
+- [X] T049 Verify YAML parsing of `allowed-tools` field continues to work (check test_parser.py tests pass)
+- [X] T050 Verify LangChain tool creation works for skills with and without `allowed-tools` field
 
 ### Security Features Verification (MUST STILL WORK)
 
-- [ ] T051 [P] Verify PathSecurityError still works: `python -c "from skillkit.core.exceptions import PathSecurityError"`
-- [ ] T052 [P] Verify ScriptPermissionError still works: `python -c "from skillkit.core.exceptions import ScriptPermissionError"`
-- [ ] T053 [P] Verify InterpreterNotFoundError still works: `python -c "from skillkit.core.exceptions import InterpreterNotFoundError"`
-- [ ] T054 Verify path traversal prevention still blocks ../../etc/passwd attacks
-- [ ] T055 Verify setuid/setgid permission checks still reject dangerous scripts
+- [X] T051 [P] Verify PathSecurityError still works: `python -c "from skillkit.core.exceptions import PathSecurityError"`
+- [X] T052 [P] Verify ScriptPermissionError still works: `python -c "from skillkit.core.exceptions import ScriptPermissionError"`
+- [X] T053 [P] Verify InterpreterNotFoundError still works: `python -c "from skillkit.core.exceptions import InterpreterNotFoundError"`
+- [X] T054 Verify path traversal prevention still blocks ../../etc/passwd attacks
+- [X] T055 Verify setuid/setgid permission checks still reject dangerous scripts
 
 ### Breaking Change Verification (EXPECTED)
 
-- [ ] T056 Verify `ToolRestrictionError` import fails with ImportError: `python -c "from skillkit.core.exceptions import ToolRestrictionError"` (should fail)
-- [ ] T057 Document that this is the ONLY expected breaking change
+- [X] T056 Verify `ToolRestrictionError` import fails with ImportError: `python -c "from skillkit.core.exceptions import ToolRestrictionError"` (should fail)
+- [X] T057 Document that this is the ONLY expected breaking change
 
 **Checkpoint**: Backward compatibility verified except for documented `ToolRestrictionError` removal
 
@@ -176,22 +176,22 @@
 
 ### Final Cleanup
 
-- [ ] T058 [P] Search entire codebase for any missed "tool restriction" references: `grep -ri "tool.restriction" src/ tests/ examples/ README.md CLAUDE.md`
-- [ ] T059 [P] Search for any remaining `ToolRestrictionError` references: `grep -r "ToolRestrictionError" src/ tests/ examples/`
-- [ ] T060 [P] Search for any remaining `_check_tool_restrictions` references: `grep -r "_check_tool_restrictions" src/ tests/`
-- [ ] T061 Review git diff to ensure only intended changes are included: `git diff --stat` and `git diff`
+- [X] T058 [P] Search entire codebase for any missed "tool restriction" references: `grep -ri "tool.restriction" src/ tests/ examples/ README.md CLAUDE.md`
+- [X] T059 [P] Search for any remaining `ToolRestrictionError` references: `grep -r "ToolRestrictionError" src/ tests/ examples/`
+- [X] T060 [P] Search for any remaining `_check_tool_restrictions` references: `grep -r "_check_tool_restrictions" src/ tests/`
+- [X] T061 Review git diff to ensure only intended changes are included: `git diff --stat` and `git diff`
 
 ### Version & Changelog
 
-- [ ] T062 Verify version in pyproject.toml remains 0.3.0 (this is a patch within 0.3.x, not a major bump)
-- [ ] T063 Verify version in src/skillkit/__init__.py remains 0.3.0
-- [ ] T064 Add changelog entry to README.md under v0.3.0 section: "Removed tool restriction enforcement while preserving allowed-tools field for backward compatibility"
-- [ ] T065 Update CLAUDE.md v0.3.0 description to clarify tool restriction enforcement removed
+- [X] T062 Verify version in pyproject.toml remains 0.3.0 (this is a patch within 0.3.x, not a major bump)
+- [X] T063 Verify version in src/skillkit/__init__.py remains 0.3.0
+- [X] T064 Add changelog entry to README.md under v0.3.0 section: "Removed tool restriction enforcement while preserving allowed-tools field for backward compatibility"
+- [X] T065 Update CLAUDE.md v0.3.0 description to clarify tool restriction enforcement removed
 
 ### Git Operations
 
-- [ ] T066 Review all staged changes: `git status` and `git diff --cached`
-- [ ] T067 Create commit with descriptive message: `git commit -m "Remove tool restriction enforcement
+- [X] T066 Review all staged changes: `git status` and `git diff --cached`
+- [X] T067 Create commit with descriptive message: `git commit -m "Remove tool restriction enforcement
 
 Remove ToolRestrictionError exception class and _check_tool_restrictions() method
 while preserving allowed-tools field in SkillMetadata for backward compatibility.
@@ -207,8 +207,8 @@ Breaking change: ToolRestrictionError import will fail (documented in contracts/
 All other APIs remain backward compatible.
 
 Refs: specs/001-script-execution/plan.md, contracts/removal-api-contract.md"`
-- [ ] T068 Verify commit includes all intended changes: `git show --stat`
-- [ ] T069 Push to branch 001-script-execution: `git push origin 001-script-execution`
+- [X] T068 Verify commit includes all intended changes: `git show --stat`
+- [X] T069 Push to branch 001-script-execution: `git push origin 001-script-execution`
 
 **Checkpoint**: All changes committed and pushed - ready for PR or merge
 
@@ -333,38 +333,38 @@ Phase 4 has 12 tasks that can run in parallel:
 
 ### Functional Success ✅
 
-- [ ] All tests pass: `pytest -v` returns exit code 0
-- [ ] Coverage ≥70% maintained: `pytest --cov` shows coverage
-- [ ] Scripts execute regardless of `allowed-tools` value (manual test T046 passes)
-- [ ] No `ToolRestrictionError` references in src/, tests/, examples/: `grep -r "ToolRestrictionError" src/ tests/ examples/` returns empty
+- [X] All tests pass: `pytest -v` returns exit code 0
+- [X] Coverage ≥70% maintained: `pytest --cov` shows coverage
+- [X] Scripts execute regardless of `allowed-tools` value (manual test T046 passes)
+- [X] No `ToolRestrictionError` references in src/, tests/, examples/: `grep -r "ToolRestrictionError" src/ tests/ examples/` returns empty
 
 ### API Success ✅
 
-- [ ] `SkillMetadata.allowed_tools` field still accessible (T047 passes)
-- [ ] `ScriptExecutor.execute()` signature unchanged (T048 passes)
-- [ ] YAML parsing continues to work (T049 passes)
-- [ ] LangChain integration works (T050 passes)
-- [ ] All security features intact: PathSecurityError, ScriptPermissionError, etc. (T051-T055 pass)
+- [X] `SkillMetadata.allowed_tools` field still accessible (T047 passes)
+- [X] `ScriptExecutor.execute()` signature unchanged (T048 passes)
+- [X] YAML parsing continues to work (T049 passes)
+- [X] LangChain integration works (T050 passes)
+- [X] All security features intact: PathSecurityError, ScriptPermissionError, etc. (T051-T055 pass)
 
 ### Documentation Success ✅
 
-- [ ] README.md updated (no ToolRestrictionError references)
-- [ ] CLAUDE.md updated (v0.3.0 description reflects removal)
-- [ ] examples/script_execution.py updated (no ToolRestrictionError import)
-- [ ] All spec docs updated (data-model.md, IMPLEMENTATION_GUIDE.md, etc.)
+- [X] README.md updated (no ToolRestrictionError references)
+- [X] CLAUDE.md updated (v0.3.0 description reflects removal)
+- [X] examples/script_execution.py updated (no ToolRestrictionError import)
+- [X] All spec docs updated (data-model.md, IMPLEMENTATION_GUIDE.md, etc.)
 
 ### Code Quality Success ✅
 
-- [ ] ruff linting passes: `ruff check src/skillkit` (T040)
-- [ ] ruff formatting passes: `ruff format --check src/skillkit` (T041)
-- [ ] mypy type checking passes: `mypy src/skillkit --strict` (T042)
-- [ ] No new warnings introduced
+- [X] ruff linting passes: `ruff check src/skillkit` (T040)
+- [X] ruff formatting passes: `ruff format --check src/skillkit` (T041)
+- [X] mypy type checking passes: `mypy src/skillkit --strict` (T042)
+- [X] No new warnings introduced
 
 ### Breaking Change Documented ✅
 
-- [ ] `ToolRestrictionError` import fails as expected (T056)
-- [ ] Breaking change documented in contracts/removal-api-contract.md (T057)
-- [ ] Changelog updated (T064-T065)
+- [X] `ToolRestrictionError` import fails as expected (T056)
+- [X] Breaking change documented in contracts/removal-api-contract.md (T057)
+- [X] Changelog updated (T064-T065)
 
 ---
 
@@ -483,15 +483,15 @@ This tasks.md integrates with quickstart-removal-tool-restrictions.md:
 
 After completing all tasks, verify:
 
-- [ ] `grep -r "ToolRestrictionError" src/ tests/ examples/` returns zero results
-- [ ] `grep -r "_check_tool_restrictions" src/ tests/` returns zero results
-- [ ] `pytest -v` passes with no failures
-- [ ] `pytest --cov` shows ≥70% coverage
-- [ ] `ruff check src/skillkit` passes
-- [ ] `mypy src/skillkit --strict` passes
-- [ ] Manual test: Script executes with `allowed-tools: [Read]` (no Bash)
-- [ ] Git diff reviewed and commit message is clear
-- [ ] All documentation updated
-- [ ] Breaking change documented
+- [X] `grep -r "ToolRestrictionError" src/ tests/ examples/` returns zero results
+- [X] `grep -r "_check_tool_restrictions" src/ tests/` returns zero results
+- [X] `pytest -v` passes with no failures
+- [X] `pytest --cov` shows ≥70% coverage
+- [X] `ruff check src/skillkit` passes
+- [X] `mypy src/skillkit --strict` passes
+- [X] Manual test: Script executes with `allowed-tools: [Read]` (no Bash)
+- [X] Git diff reviewed and commit message is clear
+- [X] All documentation updated
+- [X] Breaking change documented
 
 **Ready for**: PR creation or direct merge to main
