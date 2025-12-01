@@ -79,10 +79,10 @@ def test_create_script_tools_basic(mock_skill_with_scripts, mock_manager):
     # Should create 2 tools (one per script)
     assert len(tools) == 2
 
-    # Check tool names follow "{skill_name}.{script_name}" format
+    # Check tool names follow "{skill_name}__{script_name}" format
     tool_names = [tool.name for tool in tools]
-    assert "pdf-extractor.extract" in tool_names
-    assert "pdf-extractor.convert" in tool_names
+    assert "pdf-extractor__extract" in tool_names
+    assert "pdf-extractor__convert" in tool_names
 
 
 def test_create_script_tools_descriptions(mock_skill_with_scripts, mock_manager):
@@ -92,7 +92,7 @@ def test_create_script_tools_descriptions(mock_skill_with_scripts, mock_manager)
     tools = create_script_tools(mock_skill_with_scripts, mock_manager)
 
     # Find extract tool
-    extract_tool = next(t for t in tools if t.name == "pdf-extractor.extract")
+    extract_tool = next(t for t in tools if t.name == "pdf-extractor__extract")
 
     # Should use script description
     assert extract_tool.description == "Extract text from PDF files"
@@ -103,7 +103,7 @@ def test_script_tool_invocation_success(mock_skill_with_scripts, mock_manager):
     from skillkit.integrations.langchain import create_script_tools
 
     tools = create_script_tools(mock_skill_with_scripts, mock_manager)
-    extract_tool = next(t for t in tools if t.name == "pdf-extractor.extract")
+    extract_tool = next(t for t in tools if t.name == "pdf-extractor__extract")
 
     # Invoke tool with JSON arguments
     result = extract_tool.invoke({"arguments": {"file": "test.pdf"}})
@@ -140,7 +140,7 @@ def test_script_tool_invocation_failure(mock_skill_with_scripts, mock_manager):
     mock_manager.execute_skill_script.return_value = result
 
     tools = create_script_tools(mock_skill_with_scripts, mock_manager)
-    extract_tool = next(t for t in tools if t.name == "pdf-extractor.extract")
+    extract_tool = next(t for t in tools if t.name == "pdf-extractor__extract")
 
     # Should raise ToolException
     with pytest.raises(ToolException) as exc_info:
@@ -164,7 +164,7 @@ def test_create_langchain_tools_includes_scripts():
     skill_metadata.description = "PDF processing skill"
     manager.list_skills.return_value = [skill_metadata]
 
-    # Mock get_skill to return Skill with scripts
+    # Mock load_skill to return Skill with scripts
     script = ScriptMetadata(
         name="extract",
         path=Path("scripts/extract.py"),
@@ -175,7 +175,7 @@ def test_create_langchain_tools_includes_scripts():
     skill = Mock()
     skill.metadata = skill_metadata
     skill.scripts = [script]
-    manager.get_skill.return_value = skill
+    manager.load_skill.return_value = skill
 
     # Mock execute_skill_script
     from skillkit.core.scripts import ScriptExecutionResult
@@ -200,7 +200,7 @@ def test_create_langchain_tools_includes_scripts():
 
     tool_names = [tool.name for tool in tools]
     assert "pdf-extractor" in tool_names  # Prompt-based tool
-    assert "pdf-extractor.extract" in tool_names  # Script-based tool
+    assert "pdf-extractor__extract" in tool_names  # Script-based tool
 
 
 def test_script_tool_with_empty_description(mock_manager):

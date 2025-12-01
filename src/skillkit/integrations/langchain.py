@@ -79,7 +79,7 @@ def create_langchain_tools(manager: "SkillManager") -> List[StructuredTool]:
 
     Creates tools for both prompt-based skills and script-based skills:
     - Prompt-based tools: Named "{skill_name}" (e.g., "csv-parser")
-    - Script-based tools: Named "{skill_name}.{script_name}" (e.g., "pdf-extractor.extract")
+    - Script-based tools: Named "{skill_name}__{script_name}" (e.g., "pdf-extractor__extract")
 
     Tools support both sync and async invocation patterns:
     - Sync agents: Use tool.invoke() → calls func parameter (sync)
@@ -220,9 +220,9 @@ def create_langchain_tools(manager: "SkillManager") -> List[StructuredTool]:
 def create_script_tools(skill: "Skill", manager: "SkillManager") -> List[StructuredTool]:
     """Create LangChain StructuredTool objects for all scripts in a skill.
 
-    Each script is exposed as a separate tool with format "{skill_name}.{script_name}".
+    Each script is exposed as a separate tool with format "{skill_name}__{script_name}".
     For example, if skill "pdf-extractor" has scripts "extract" and "convert",
-    this function creates two tools: "pdf-extractor.extract" and "pdf-extractor.convert".
+    this function creates two tools: "pdf-extractor__extract" and "pdf-extractor__convert".
 
     Tools support both sync and async invocation patterns:
     - Sync agents: Use tool.invoke() → calls func parameter (sync)
@@ -256,7 +256,7 @@ def create_script_tools(skill: "Skill", manager: "SkillManager") -> List[Structu
         >>> print(f"Created {len(script_tools)} script tools")
         Created 2 script tools
 
-        >>> # Tool names: "pdf-extractor.extract", "pdf-extractor.convert"
+        >>> # Tool names: "pdf-extractor__extract", "pdf-extractor__convert"
         >>> for tool in script_tools:
         ...     print(f"  - {tool.name}: {tool.description}")
 
@@ -270,7 +270,7 @@ def create_script_tools(skill: "Skill", manager: "SkillManager") -> List[Structu
     scripts = skill.scripts
 
     for script in scripts:
-        # Get fully qualified tool name: "{skill_name}.{script_name}"
+        # Get fully qualified tool name: "{skill_name}__{script_name}"
         tool_name = script.get_fully_qualified_name(skill.metadata.name)
 
         # Use description from script metadata (extracted from comments/docstrings)
@@ -378,7 +378,7 @@ def create_script_tools(skill: "Skill", manager: "SkillManager") -> List[Structu
 
         # Create StructuredTool with both sync and async support
         tool = StructuredTool(
-            name=tool_name,  # "{skill_name}.{script_name}"
+            name=tool_name,  # "{skill_name}__{script_name}"
             description=tool_description,
             args_schema=ScriptInput,  # Free-form JSON dict
             func=invoke_script,  # Sync version

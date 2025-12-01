@@ -72,7 +72,7 @@ def main() -> None:
 
     # Demonstrate script tool invocation (v0.3+)
     print("\n[3.5] Testing script tool invocation (v0.3+ feature)...")
-    script_tools = [tool for tool in tools if "." in tool.name]
+    script_tools = [tool for tool in tools if "__" in tool.name]
     if script_tools:
         print(f"\nFound {len(script_tools)} script-based tools:")
         for tool in script_tools:
@@ -214,7 +214,7 @@ async def async_agent_demo() -> None:
 
     # Demonstrate ASYNC script tool invocation (v0.3+)
     print("\n[3.5] Testing ASYNC script tool invocation (v0.3+ feature)...")
-    script_tools = [tool for tool in tools if "." in tool.name]
+    script_tools = [tool for tool in tools if "__" in tool.name]
     if script_tools:
         print(f"\nFound {len(script_tools)} script-based tools:")
         for tool in script_tools:

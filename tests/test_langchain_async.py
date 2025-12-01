@@ -101,24 +101,38 @@ class TestLangChainAsyncTools:
 
     @pytest.mark.asyncio
     async def test_tool_names_match_skills(self, skill_manager_async):
-        """Test that tool names match discovered skill names."""
+        """Test that tool names match discovered skill names (including script tools)."""
         tools = create_langchain_tools(skill_manager_async)
         skill_names = {meta.name for meta in skill_manager_async.list_skills()}
 
         tool_names = {tool.name for tool in tools}
 
-        # All tool names should match skill names
-        assert tool_names == skill_names
+        # Tool names should include:
+        # 1. Prompt-based tools (skill name only, e.g., "pdf-extractor")
+        # 2. Script-based tools (skill__script format, e.g., "pdf-extractor__extract")
+        # Extract base skill names from both types
+        tool_skill_names = {
+            name.split("__")[0] if "__" in name else name
+            for name in tool_names
+        }
+
+        # All tools should correspond to discovered skills
+        assert tool_skill_names == skill_names
 
     @pytest.mark.asyncio
     async def test_tool_descriptions_match_skills(self, skill_manager_async):
-        """Test that tool descriptions match skill descriptions."""
+        """Test that tool descriptions match skill descriptions for prompt-based tools."""
         tools = create_langchain_tools(skill_manager_async)
         skills = {meta.name: meta for meta in skill_manager_async.list_skills()}
 
         for tool in tools:
-            skill_meta = skills[tool.name]
-            assert tool.description == skill_meta.description
+            # Only check prompt-based tools (no __ separator)
+            if "__" not in tool.name:
+                skill_meta = skills[tool.name]
+                assert tool.description == skill_meta.description
+            else:
+                # Script-based tools should have a description
+                assert tool.description  # Non-empty
 
 
 class TestLangChainAsyncStateManagement:

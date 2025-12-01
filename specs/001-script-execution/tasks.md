@@ -17,9 +17,9 @@
 
 **Purpose**: Project initialization and verification of test environment
 
-- [ ] T001 Verify Python 3.10+ environment is active and all dependencies are installed
-- [ ] T002 Create backup of current branch state before making changes
-- [ ] T003 [P] Run existing test suite to establish baseline (pytest -v)
+- [X] T001 Verify Python 3.10+ environment is active and all dependencies are installed
+- [X] T002 Create backup of current branch state before making changes
+- [X] T003 [P] Run existing test suite to establish baseline (pytest -v)
 
 ---
 
@@ -29,12 +29,12 @@
 
 **⚠️ CRITICAL**: No user story work or test updates can begin until this phase is complete
 
-- [ ] T004 Add ToolIDValidationError exception class to src/skillkit/core/exceptions.py
-- [ ] T005 Export ToolIDValidationError in src/skillkit/__init__.py
-- [ ] T006 Add validate_tool_id() function to src/skillkit/core/scripts.py
-- [ ] T007 Update ScriptMetadata.get_fully_qualified_name() method in src/skillkit/core/scripts.py to use new format
-- [ ] T008 Update tool name generation in src/skillkit/integrations/langchain.py to use new format
-- [ ] T009 Run quick validation test to ensure new format and validation work correctly
+- [X] T004 Add ToolIDValidationError exception class to src/skillkit/core/exceptions.py
+- [X] T005 Export ToolIDValidationError in src/skillkit/__init__.py
+- [X] T006 Add validate_tool_id() function to src/skillkit/core/scripts.py
+- [X] T007 Update ScriptMetadata.get_fully_qualified_name() method in src/skillkit/core/scripts.py to use new format
+- [X] T008 Update tool name generation in src/skillkit/integrations/langchain.py to use new format
+- [X] T009 Run quick validation test to ensure new format and validation work correctly
 
 **Checkpoint**: Core implementation ready - test updates and documentation can now proceed in parallel
 
@@ -48,14 +48,14 @@
 
 ### Implementation for User Story 1
 
-- [ ] T010 [P] [US1] Update test_scripts.py assertions to expect new tool ID format (skill-name__script-name)
-- [ ] T011 [P] [US1] Update test_langchain.py assertions to expect new tool ID format
-- [ ] T012 [P] [US1] Update test_script_langchain_integration.py assertions to expect new tool ID format
-- [ ] T013 [P] [US1] Add unit tests for validate_tool_id() function in test_scripts.py (valid formats, invalid formats, length limits)
-- [ ] T014 [P] [US1] Add unit tests for ToolIDValidationError exception in test_exceptions.py
-- [ ] T015 [US1] Update any other test files that reference the old format (grep for patterns like skill_name.script_name)
-- [ ] T016 [US1] Run full test suite and fix any remaining test failures (pytest -v)
-- [ ] T017 [US1] Verify test coverage remains at 70%+ (pytest --cov)
+- [X] T010 [P] [US1] Update test_scripts.py assertions to expect new tool ID format (skill-name__script-name)
+- [X] T011 [P] [US1] Update test_langchain.py assertions to expect new tool ID format
+- [X] T012 [P] [US1] Update test_script_langchain_integration.py assertions to expect new tool ID format
+- [X] T013 [P] [US1] Add unit tests for validate_tool_id() function in test_scripts.py (valid formats, invalid formats, length limits)
+- [X] T014 [P] [US1] Add unit tests for ToolIDValidationError exception in test_exceptions.py
+- [X] T015 [US1] Update any other test files that reference the old format (grep for patterns like skill_name.script_name)
+- [X] T016 [US1] Run full test suite and fix any remaining test failures (pytest -v)
+- [X] T017 [US1] Verify test coverage remains at 70%+ (pytest --cov)
 
 **Checkpoint**: At this point, all core implementation and tests should pass with the new format
 
@@ -69,12 +69,12 @@
 
 ### Implementation for User Story 2
 
-- [ ] T018 [P] [US2] Update README.md script execution section with new tool ID format and validation requirements
-- [ ] T019 [P] [US2] Create or update examples/script_execution.py with examples using new tool ID format
-- [ ] T020 [P] [US2] Update docstrings in src/skillkit/core/scripts.py to document new format
-- [ ] T021 [P] [US2] Update docstrings in src/skillkit/integrations/langchain.py to document new format
-- [ ] T022 [US2] Search codebase for any remaining references to old format in comments or documentation
-- [ ] T023 [US2] Verify all example code runs correctly with new format
+- [X] T018 [P] [US2] Update README.md script execution section with new tool ID format and validation requirements
+- [X] T019 [P] [US2] Create or update examples/script_execution.py with examples using new tool ID format
+- [X] T020 [P] [US2] Update docstrings in src/skillkit/core/scripts.py to document new format
+- [X] T021 [P] [US2] Update docstrings in src/skillkit/integrations/langchain.py to document new format
+- [X] T022 [US2] Search codebase for any remaining references to old format in comments or documentation
+- [X] T023 [US2] Verify all example code runs correctly with new format
 
 **Checkpoint**: All documentation and examples should reflect the new tool ID format
 
@@ -84,13 +84,13 @@
 
 **Purpose**: Final validation and cleanup
 
-- [ ] T024 [P] Run full test suite one final time (pytest -v)
-- [ ] T025 [P] Run type checking (mypy src/skillkit --strict)
-- [ ] T026 [P] Run linting (ruff check src/skillkit)
-- [ ] T027 [P] Run formatting check (ruff format --check src/skillkit)
-- [ ] T028 Review all changes for security implications
-- [ ] T029 Update CLAUDE.md with v0.3.0 release notes if needed
-- [ ] T030 Verify backward compatibility notes are accurate (no existing deployments affected)
+- [X] T024 [P] Run full test suite one final time (pytest -v)
+- [X] T025 [P] Run type checking (mypy src/skillkit --strict)
+- [X] T026 [P] Run linting (ruff check src/skillkit)
+- [X] T027 [P] Run formatting check (ruff format --check src/skillkit)
+- [X] T028 Review all changes for security implications
+- [X] T029 Update CLAUDE.md with v0.3.0 release notes if needed
+- [X] T030 Verify backward compatibility notes are accurate (no existing deployments affected)
 
 ---
 

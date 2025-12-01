@@ -29,6 +29,7 @@ from skillkit.core.exceptions import (
     SkillSecurityError,
     SkillsUseError,
     SuspiciousInputError,
+    ToolIDValidationError,
 )
 from skillkit.core.manager import SkillManager
 from skillkit.core.models import Skill, SkillMetadata
@@ -69,4 +70,5 @@ __all__ = [
     "ScriptPermissionError",
     "ArgumentSerializationError",
     "ArgumentSizeError",
+    "ToolIDValidationError",
 ]

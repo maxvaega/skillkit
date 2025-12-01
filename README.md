@@ -410,13 +410,36 @@ from skillkit.integrations.langchain import create_langchain_tools
 manager = SkillManager()
 manager.discover()
 
-# Each script becomes a separate tool: "{skill-name}.{script-name}"
+# Each script becomes a separate tool: "{skill-name}__{script-name}"
 tools = create_langchain_tools(manager)
 
 # Example tool names:
-# - "pdf-extractor.extract"
-# - "pdf-extractor.convert"
-# - "pdf-extractor.parse"
+# - "pdf-extractor__extract"
+# - "pdf-extractor__convert"
+# - "pdf-extractor__parse"
+```
+
+#### Tool ID Format and Validation
+
+Script tool IDs follow a validated format to ensure LLM provider compatibility:
+
+- **Format**: `{skill-name}__{script-name}` (double underscore separator)
+- **Validation Pattern**: `^[a-z0-9-]+__[a-z0-9_]+$`
+- **Max Length**: 60 characters
+- **Automatic Normalization**:
+  - Skill names: Lowercase with underscores converted to hyphens
+  - Script names: Lowercase with underscores preserved
+
+```python
+# Examples of valid tool IDs:
+# ✓ "pdf-extractor__extract" (skill: PDF-Extractor, script: extract.py)
+# ✓ "csv-parser__parse" (skill: csv_parser, script: parse.py)
+# ✓ "data-processor__transform-json" (skill: DataProcessor, script: transform_json.py)
+
+# Invalid formats raise ToolIDValidationError:
+# ✗ "pdf.extractor__extract" (dots not allowed in skill name)
+# ✗ "PDF-Extractor__Extract" (uppercase not allowed)
+# ✗ "very-long-skill-name-exceeds-limit__script" (exceeds 60 chars)
 ```
 
 ### Error Handling
@@ -425,7 +448,8 @@ tools = create_langchain_tools(manager)
 from skillkit.core.exceptions import (
     ScriptNotFoundError,
     InterpreterNotFoundError,
-    PathSecurityError
+    PathSecurityError,
+    ToolIDValidationError
 )
 
 try:

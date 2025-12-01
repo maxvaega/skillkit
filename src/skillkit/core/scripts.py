@@ -74,6 +74,60 @@ INTERPRETER_MAP: Dict[str, str] = {
 logger = logging.getLogger(__name__)
 
 
+def validate_tool_id(tool_id: str, skill_name: str, script_name: str) -> None:
+    """Validate tool ID format and length.
+
+    Requirements:
+    - Format: ^[a-z0-9-]+__[a-z0-9_]+$ (lowercase, digits, hyphens in skill part,
+              underscores in script part, double underscore separator)
+    - Length: Maximum 60 characters total
+
+    Args:
+        tool_id: Generated tool ID to validate
+        skill_name: Original skill name (for error context)
+        script_name: Original script name (for error context)
+
+    Raises:
+        ToolIDValidationError: If validation fails
+
+    Example:
+        >>> validate_tool_id("pdf-extractor__extract", "PDF-Extractor", "extract")
+        # No exception - valid format
+
+        >>> validate_tool_id("pdf.extractor__extract", "pdf.extractor", "extract")
+        Traceback (most recent call last):
+        ...
+        ToolIDValidationError: Tool ID has invalid format: 'pdf.extractor__extract'. ...
+    """
+    import re
+
+    from skillkit.core.exceptions import ToolIDValidationError
+
+    # Check length
+    if len(tool_id) > 60:
+        raise ToolIDValidationError(
+            f"Tool ID exceeds 60 character limit: '{tool_id}' ({len(tool_id)} chars)",
+            tool_id=tool_id,
+            skill_name=skill_name,
+            script_name=script_name,
+            reason="length_exceeded",
+        )
+
+    # Check format
+    pattern = r"^[a-z0-9-]+__[a-z0-9_]+$"
+    if not re.match(pattern, tool_id):
+        raise ToolIDValidationError(
+            f"Tool ID has invalid format: '{tool_id}'. "
+            f"Must match pattern: ^[a-z0-9-]+__[a-z0-9_]+$ "
+            f"(lowercase skill name with hyphens/digits + '__' + "
+            f"lowercase script name with underscores/digits)",
+            tool_id=tool_id,
+            skill_name=skill_name,
+            script_name=script_name,
+            reason="invalid_format",
+        )
+
+
 @dataclass(frozen=True, slots=True)
 class ScriptMetadata:
     """Metadata for a detected executable script.
@@ -126,20 +180,38 @@ class ScriptMetadata:
     """
 
     def get_fully_qualified_name(self, skill_name: str) -> str:
-        """Get LangChain tool name for this script.
+        """Get LangChain tool name for this script with validation.
+
+        Format: {lowercase-skill-name}__{lowercase-script-name}
+        Validation: ^[a-z0-9-]+__[a-z0-9_]+$ (max 60 chars)
 
         Args:
             skill_name: Name of the parent skill
 
         Returns:
-            Fully qualified tool name (e.g., 'pdf-extractor.extract')
+            Validated tool ID string
+
+        Raises:
+            ToolIDValidationError: If generated ID fails validation
 
         Example:
             >>> meta = ScriptMetadata('extract', Path('scripts/extract.py'), 'python', '')
             >>> meta.get_fully_qualified_name('pdf-extractor')
-            'pdf-extractor.extract'
+            'pdf-extractor__extract'
         """
-        return f"{skill_name}.{self.name}"
+        # Lowercase and replace underscores with hyphens in skill name
+        skill_part = skill_name.lower().replace("_", "-")
+
+        # Lowercase script name (keep underscores)
+        script_part = self.name.lower()
+
+        # Generate tool ID
+        tool_id = f"{skill_part}__{script_part}"
+
+        # Validate format and length
+        validate_tool_id(tool_id, skill_name, self.name)
+
+        return tool_id
 
 
 @dataclass(frozen=True, slots=True)
@@ -828,7 +900,6 @@ class ScriptExecutor:
                 f"  Setgid: {has_setgid}\n"
                 f"  Recommendation: Remove dangerous bits with 'chmod u-s,g-s {script_path}'"
             )
-
 
     def _resolve_interpreter(self, script_path: Path) -> str:
         """Resolve interpreter for script execution.

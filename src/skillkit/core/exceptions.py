@@ -422,3 +422,48 @@ class ArgumentSizeError(ScriptError):
         self.max_bytes = max_bytes
 
 
+class ToolIDValidationError(ScriptError):
+    """Raised when tool ID fails validation (invalid format or length exceeded).
+
+    This exception is raised when a generated tool ID does not match the
+    required format or exceeds the 60 character limit, which could cause
+    compatibility issues with LLM providers.
+
+    Attributes:
+        tool_id: The invalid tool ID that failed validation
+        skill_name: Original skill name before formatting
+        script_name: Original script name before formatting
+        reason: Specific reason for validation failure
+
+    Example:
+        >>> raise ToolIDValidationError(
+        ...     "Tool ID exceeds 60 character limit: 'very-long-skill-name__script' (65 chars)",
+        ...     tool_id='very-long-skill-name__script',
+        ...     skill_name='VeryLongSkillName',
+        ...     script_name='script',
+        ...     reason='length_exceeded'
+        ... )
+    """
+
+    def __init__(
+        self,
+        message: str,
+        tool_id: str | None = None,
+        skill_name: str | None = None,
+        script_name: str | None = None,
+        reason: str | None = None,
+    ) -> None:
+        """Initialize ToolIDValidationError with details.
+
+        Args:
+            message: Error description
+            tool_id: The invalid tool ID
+            skill_name: Original skill name
+            script_name: Original script name
+            reason: Validation failure reason (e.g., 'invalid_format', 'length_exceeded')
+        """
+        super().__init__(message)
+        self.tool_id = tool_id
+        self.skill_name = skill_name
+        self.script_name = script_name
+        self.reason = reason
