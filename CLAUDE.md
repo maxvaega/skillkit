@@ -6,7 +6,7 @@
 - SKILL.md parsing with YAML frontmatter validation
 - Progressive disclosure pattern (metadata loading → on-demand content)
 - Framework integrations (LangChain, LlamaIndex, CrewAI, Haystack, Google ADK)
-- Security features (tool restrictions, path traversal prevention)
+- Security features (path traversal prevention, permission checks)
 - Model-agnostic design supporting Claude, GPT, Gemini, and open-source LLMs
 
 ## Development Approach
@@ -15,21 +15,24 @@ This project follows a **Vertical Slice MVP strategy** to deliver working functi
 
 - **v0.1 (Released)**: Core functionality + LangChain integration (sync only)
 - **v0.2 (Released)**: Async support + multi-source discovery + plugin integration
-- **v0.3 (Planned)**: Script execution + tool restriction enforcement + additional framework integrations
-- **v1.0 (Planned)**: Production polish + comprehensive documentation + 90% test coverage
+- **v0.3 (Released)**: Script execution with security controls
+- **v1.0 (Planned)**: Additional framework integrations + production polish + comprehensive documentation + 90% test coverage
 
-### Current Focus (v0.2)
+### Current Focus (v0.3)
 
-The v0.2 release adds enterprise-grade features:
-1. **Async support**: `adiscover()` and `ainvoke_skill()` methods for concurrent operations
-2. **Multi-source discovery**: Project dirs, Anthropic config, plugins, custom paths with priority resolution
-3. **Plugin ecosystem**: Full MCPB manifest support with namespaced skill access (`plugin:skill-name`)
-4. **Nested structures**: Discover skills up to 5 levels deep in directory hierarchies
-5. **Secure file resolution**: Path traversal prevention and reference validation
-6. **LangChain async**: Full async/await support in LangChain integration
-7. **Backward compatibility**: All v0.1 APIs remain unchanged
+The v0.3 release enables deterministic code execution with comprehensive security:
 
-**What's deferred to v0.3+**: Script execution, tool restriction enforcement, additional framework integrations (LlamaIndex, CrewAI, Haystack), advanced argument schemas, CI/CD pipeline, 90% test coverage.
+1. **Script Execution**: Execute Python, Shell, JavaScript, Ruby, and Perl scripts from skills
+2. **Security Controls**: Path traversal prevention, permission checks (setuid/setgid), timeout enforcement
+3. **Environment Injection**: Automatic SKILL_NAME, SKILL_BASE_DIR, SKILL_VERSION, SKILLKIT_VERSION variables
+4. **Automatic Detection**: Scripts discovered recursively in skill directories
+5. **LangChain Integration**: Each script exposed as separate StructuredTool (`{skill-name}.{script-name}`)
+7. **Robust Error Handling**: Comprehensive exception hierarchy for script-related errors
+8. **Audit Logging**: All script executions logged with metadata
+9. **Cross-Platform Support**: Works on Linux, macOS, and Windows
+10. **Backward compatibility**: All v0.1/v0.2 APIs remain unchanged
+
+**What's deferred to v1.0+**: Additional framework integrations (LlamaIndex, CrewAI, Haystack), advanced argument schemas, CI/CD pipeline, 90% test coverage.
 
 ## Key Architectural Decisions
 
@@ -60,38 +63,6 @@ Additional architectural patterns added in v0.2:
 
 Main project documentation is located in the `.docs/` directory:
 
-### `.docs/MVP_VERTICAL_SLICE_PLAN.md`
-The **implementation roadmap** for the project. Contains:
-- Vertical slice philosophy and rationale
-- 4-week MVP plan with week-by-week breakdown
-- Critical path requirements (CP-1 through CP-7)
-- Post-launch iteration roadmap (v0.2, v0.3, v1.0)
-- Success metrics and validation criteria
-- Risk mitigation strategies
-- Comparison between original horizontal approach vs vertical slice
-
-### `.docs/PRD_skillkit_LIBRARY.md`
-The **comprehensive Product Requirements Document**. Contains:
-- Complete functional requirements (FR-1 through FR-9)
-- Technical specifications (TS-1 through TS-6)
-- Integration requirements for all frameworks (IR-1 through IR-6)
-- Distribution and deployment requirements (DR-1 through DR-12)
-- Error handling specifications (EH-1 through EH-3)
-- Testing requirements (TR-1 through TR-5)
-- Open points requiring resolution (OP-1 through OP-7)
-- Example skills and plugin structures
-
-### `.docs/TECH_SPECS.md`
-The **technical architecture specification** for v0.1. Contains:
-- Detailed module structure and file organization
-- Core data models (SkillMetadata, Skill classes)
-- API signatures for all public methods
-- Exception hierarchy and error handling
-- Dependencies and version requirements
-- Code examples and usage patterns
-- Key design decisions and rationale
-- Testing strategy and performance considerations
-
 ### `.docs/SKILL format specification`
 - Full specification for skills and SKILL.md
 
@@ -100,7 +71,7 @@ This project was developed using speckit method. all development phases have bee
 
 ## Project Status
 
-**Current Phase**: ✅ v0.2.0 RELEASED
+**Current Phase**: ✅ v0.3.0 RELEASED
 
 **v0.1 Completed**:
 - ✅ Core functionality (discovery, parsing, models, manager, processors)
@@ -123,10 +94,12 @@ This project was developed using speckit method. all development phases have bee
 - ✅ Updated examples (async_usage.py, multi_source.py, file_references.py)
 - ✅ Backward compatible with v0.1
 
-**Next Steps**:
-- Plan v0.3: Script execution, tool restrictions, framework integrations
-- Gather community feedback and feature requests
-- Improve documentation with more real-world examples
+**v0.3 Completed**:
+- ✅ Script execution (Python, Shell, JavaScript, Ruby, Perl)
+- ✅ Security controls (path validation, timeout enforcement)
+- ✅ Environment variable injection (SKILL_NAME, SKILL_BASE_DIR, SKILL_VERSION, SKILLKIT_VERSION)
+- ✅ Automatic script detection (recursive, up to 5 levels)
+- ✅ LangChain script tool integration
 
 ## Development Environment
 
@@ -236,6 +209,18 @@ skillkit/
 
 ## Changelog
 
+### v0.3.0 (Released)
+- **Script Execution**: Execute Python, Shell, JavaScript, Ruby, and Perl scripts from skills
+- **Security Controls**: Path traversal prevention, timeout enforcement
+- **Environment Injection**: Automatic SKILL_NAME, SKILL_BASE_DIR, SKILL_VERSION, SKILLKIT_VERSION variables
+- **Automatic Detection**: Scripts discovered recursively in skill directories
+- **LangChain Integration**: Each script exposed as separate StructuredTool (`{skill-name}.{script-name}`)
+- **Robust Error Handling**: Comprehensive exception hierarchy for script-related errors
+- **Audit Logging**: All script executions logged with metadata
+- **Cross-Platform**: Works on Linux, macOS, and Windows
+- **Backward Compatible**: All v0.1/v0.2 APIs remain unchanged
+- **Note**: Tool restriction enforcement removed and postponed
+
 ### v0.2.0 (Released)
 - **Async Support**: Full async/await implementation with `adiscover()` and `ainvoke_skill()`
 - **Multi-Source Discovery**: Project dirs, Anthropic config, plugins, custom paths with priority resolution
@@ -262,25 +247,10 @@ skillkit/
 - **Storage**: Filesystem-based (`.claude/skills/` directories, `.claude-plugin/plugin.json` manifests)
 - **Testing**: pytest 7.0+, pytest-cov 4.0+, pytest-asyncio 0.21+
 - **Quality**: ruff 0.1.0+, mypy 1.0+
-
-## v0.2 Implementation Notes
-
-**Branch**: `001-v0-2-async-discovery-files` (merged to main)
-
-**Key Changes**:
-1. Added `aiofiles` dependency for async file I/O
-2. Implemented async methods across all core modules (discovery, parser, manager)
-3. Enhanced SkillDiscovery with multi-source support and priority resolution
-4. Added plugin manifest parsing and namespace management
-5. Implemented secure file path resolution with traversal prevention
-6. Extended LangChain integration with async support
-7. Added comprehensive async tests with pytest-asyncio
-8. Updated all examples to demonstrate new capabilities
-
-**Performance Impact**:
-- Async discovery: ~40-60% faster for 100+ skills (concurrent file I/O)
-- Memory: No change from v0.1 (still ~2-2.5MB for 100 skills)
-- Backward compatibility: Zero breaking changes
+- Filesystem-based (scripts stored in skill directories: `scripts/` or skill root) (001-script-execution)
+- Python 3.10+ (minimum for existing skillkit v0.3.0 compatibility) + PyYAML 6.0+ (existing), aiofiles 23.0+ (existing), subprocess (stdlib), pathlib (stdlib) (001-script-execution)
+- Filesystem-based (Python source files and test files to be modified/removed) (001-script-execution)
+- Python 3.10+ (minimum for existing skillkit v0.3.0 compatibility) + PyYAML 6.0+ (existing), subprocess (stdlib), pathlib (stdlib), json (stdlib) (001-script-execution)
 
 ## Quick Reference for AI Agents
 

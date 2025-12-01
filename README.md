@@ -17,18 +17,24 @@ skillkit is compatible with existings skills (SKILL.md), so you can browse and u
     <img src="https://img.shields.io/github/stars/maxvaega/skillkit" /></a>
 </p>
 
+<div align="center">
+<img src="https://i.imgflip.com/addac0.jpg" title="skillkit for developers" width=370px height=250px/>
+</div>
+
 ---
 
 ## Features
 
 - **Framework-free**: can be used without any framework, or with other frameworks (currently only compatible with LangChain - more coming in the future!)
+- **Fully compatible with existing skills**: existing skills can be copied directly, no change needed
 - **Model-agnostic design**: Works with any LLM
 - **Multi-source skill discovery**: From project, Anthropic config, plugins, and custom directories with priority-based conflict resolution
 - **YAML frontmatter parsing** with comprehensive validation
 - **Progressive disclosure pattern** (metadata-first loading, 80% memory reduction)
+- **Script execution**: Execute Python, Shell, JavaScript, Ruby, and Perl scripts from skills with comprehensive security controls
 - **Plugin ecosystem**: Full support for Anthropic's MCPB plugin manifests with namespaced skill access
 - **Nested directory structures**: Discover skills in any directory hierarchy up to 5 levels deep
-- **Security features**: Input validation, size limits, suspicious pattern detection, path security, secure file resolution
+- **Security features**: Input validation, size limits, suspicious pattern detection, path security, secure file resolution, script sandboxing
 
 ---
 
@@ -44,7 +50,7 @@ skillkit is compatible with existings skills (SKILL.md), so you can browse and u
 
 **-  Achieve scalable efficiency through progressive disclosure** — Unlike traditional prompting where everything loads into context, skills use a three-tier discovery system (metadata → full instructions → supplementary files) that **keeps Claude's context window lean**. This architecture allows unlimited expertise to be available without token bloat, dramatically **reducing running costs** while supporting dozens of skills simultaneously.
 
-**-  Combine AI reasoning with deterministic code execution** — Skills can bundle Python scripts and executables alongside natural language instructions, letting Claude use traditional programming for tasks where LLMs are wasteful or unreliable (like sorting lists, filling PDF forms, or data transformations). This hybrid approach delivers the reliability of code with the flexibility of AI reasoning, ensuring consistent, auditable results for mission-critical operations. ⚠️ **Warning** Code execution feature is not currently active and will be released in future versions of skillkit
+**-  Combine AI reasoning with deterministic code execution** — Skills can bundle Python, Shell, JavaScript, Ruby, and Perl scripts alongside natural language instructions, letting AI use traditional programming for tasks where LLMs are wasteful or unreliable (like sorting lists, filling PDF forms, or data transformations). This hybrid approach delivers the reliability of code with the flexibility of AI reasoning, ensuring consistent, auditable results for mission-critical operations. ✅ **Available in v0.3.0+** with comprehensive security controls including path validation, permission checks, timeout enforcement, and audit logging
 
 ### Where can i find ready-to-use skills?
 
@@ -295,6 +301,206 @@ If SKILL.md has no `$ARGUMENTS` placeholder:
 - With arguments: appended to end of content
 - Without arguments: content returned unchanged
 
+## Script Execution (v0.3+)
+
+Skills can include executable scripts for deterministic operations, combining AI reasoning with code execution. Scripts are automatically detected and can be executed with security controls.
+
+### Supported Script Types
+
+- **Python** (`.py`) - Python 3.x scripts
+- **Shell** (`.sh`) - Bash shell scripts
+- **JavaScript** (`.js`) - Node.js scripts
+- **Ruby** (`.rb`) - Ruby scripts
+- **Perl** (`.pl`) - Perl scripts
+- **Windows** (`.bat`, `.cmd`, `.ps1`) - Batch and PowerShell scripts
+
+### Basic Script Execution
+
+```python
+from skillkit import SkillManager
+
+manager = SkillManager()
+manager.discover()
+
+# Execute a script from a skill
+result = manager.execute_skill_script(
+    skill_name="pdf-extractor",
+    script_name="extract",
+    arguments={"file": "document.pdf", "pages": "all"},
+    timeout=30  # optional, defaults to 30 seconds
+)
+
+if result.success:
+    print(result.stdout)  # Script output
+else:
+    print(f"Error: {result.stderr}")
+    print(f"Exit code: {result.exit_code}")
+```
+
+### Script Directory Structure
+
+Scripts should be placed in a `scripts/` directory or in the skill root:
+
+```
+my-skill/
+├── SKILL.md
+└── scripts/
+    ├── extract.py
+    ├── convert.sh
+    └── utils/
+        └── parser.py
+```
+
+### Script Input/Output
+
+Scripts receive arguments as JSON via stdin and should output results to stdout.
+
+**Important**: All parameter names are **automatically normalized to lowercase** by the core `execute_skill_script` method. This ensures consistent handling across all framework integrations (LangChain, LlamaIndex, CrewAI, etc.), regardless of how LLMs or developers capitalize parameter names.
+
+**Best Practice**: Always use lowercase parameter names in your scripts:
+
+```python
+#!/usr/bin/env python3
+"""Extract data from PDF file."""
+import sys
+import json
+
+# Read arguments from stdin
+args = json.load(sys.stdin)
+
+# ✅ Use lowercase parameter names for compatibility
+file_path = args.get('file_path', 'document.pdf')
+page_range = args.get('page_range', 'all')
+
+# Process data
+result = {"extracted_text": "..."}
+
+# Output JSON to stdout
+print(json.dumps(result))
+```
+
+**Example**: If an LLM generates `{'File_Path': 'doc.pdf', 'Page_Range': '1-5'}`, skillkit automatically converts it to `{'file_path': 'doc.pdf', 'page_range': '1-5'}` before passing to your script. This normalization happens in the core manager, benefiting all framework integrations.
+
+### Environment Variables
+
+Scripts automatically receive these environment variables:
+
+- `SKILL_NAME` - Name of the parent skill
+- `SKILL_BASE_DIR` - Absolute path to skill directory
+- `SKILL_VERSION` - Skill version from metadata
+- `SKILLKIT_VERSION` - Current skillkit version
+
+```python
+import os
+
+skill_name = os.environ['SKILL_NAME']
+skill_dir = os.environ['SKILL_BASE_DIR']
+```
+
+### Security Features
+
+Script execution includes comprehensive security controls:
+
+- **Path Validation**: Prevents path traversal attacks
+- **Permission Checks**: Blocks setuid/setgid scripts (Unix/Linux)
+- **Timeout Enforcement**: Kills hung processes (default 30s, max 600s)
+- **Output Limits**: Truncates output at 10MB per stream
+- **Audit Logging**: All executions logged with metadata
+
+### LangChain Integration
+
+Scripts are automatically exposed as separate LangChain tools:
+
+```python
+from skillkit import SkillManager
+from skillkit.integrations.langchain import create_langchain_tools
+
+manager = SkillManager()
+manager.discover()
+
+# Each script becomes a separate tool: "{skill-name}__{script-name}"
+tools = create_langchain_tools(manager)
+
+# Example tool names:
+# - "pdf-extractor__extract"
+# - "pdf-extractor__convert"
+# - "pdf-extractor__parse"
+```
+
+#### Tool ID Format and Validation
+
+Script tool IDs follow a validated format to ensure LLM provider compatibility:
+
+- **Format**: `{skill-name}__{script-name}` (double underscore separator)
+- **Validation Pattern**: `^[a-z0-9-]+__[a-z0-9_]+$`
+- **Max Length**: 60 characters
+- **Automatic Normalization**:
+  - Skill names: Lowercase with underscores converted to hyphens
+  - Script names: Lowercase with underscores preserved
+
+```python
+# Examples of valid tool IDs:
+# ✓ "pdf-extractor__extract" (skill: PDF-Extractor, script: extract.py)
+# ✓ "csv-parser__parse" (skill: csv_parser, script: parse.py)
+# ✓ "data-processor__transform-json" (skill: DataProcessor, script: transform_json.py)
+
+# Invalid formats raise ToolIDValidationError:
+# ✗ "pdf.extractor__extract" (dots not allowed in skill name)
+# ✗ "PDF-Extractor__Extract" (uppercase not allowed)
+# ✗ "very-long-skill-name-exceeds-limit__script" (exceeds 60 chars)
+```
+
+### Error Handling
+
+```python
+from skillkit.core.exceptions import (
+    ScriptNotFoundError,
+    InterpreterNotFoundError,
+    PathSecurityError,
+    ToolIDValidationError
+)
+
+try:
+    result = manager.execute_skill_script(
+        skill_name="my-skill",
+        script_name="process",
+        arguments={"data": [1, 2, 3]}
+    )
+except ScriptNotFoundError:
+    print("Script not found in skill")
+except InterpreterNotFoundError:
+    print("Required interpreter not available")
+except PathSecurityError:
+    print("Security validation failed")
+```
+
+### Execution Result Properties
+
+The `ScriptExecutionResult` object provides detailed execution information:
+
+```python
+result = manager.execute_skill_script(...)
+
+result.exit_code          # Process exit code (0 = success)
+result.success            # True if exit_code == 0
+result.stdout             # Captured standard output
+result.stderr             # Captured standard error
+result.execution_time_ms  # Execution duration in milliseconds
+result.timeout            # True if script was killed by timeout
+result.signaled           # True if terminated by signal
+result.signal             # Signal name (e.g., 'SIGSEGV')
+result.stdout_truncated   # True if output exceeded 10MB
+result.stderr_truncated   # True if stderr exceeded 10MB
+```
+
+### Examples
+
+Complete working examples available in `examples/`:
+
+- **examples/script_execution.py** - Basic execution, error handling, timeouts
+- **examples/langchain_agent.py** - LangChain integration with script tools
+- **examples/skills/pdf-extractor/** - Real-world skill with multiple scripts
+
 ## Debugging Tips
 
 ### Enable logging
@@ -409,16 +615,30 @@ python examples/file_references.py
 - ✅ LangChain async integration (`ainvoke`)
 - ✅ Backward compatible with v0.1
 
-### v0.3 (Planned)
-- Script Execution (script detection, execution with variables, stdout/stderr capture, sandboxing)
-- Tool restriction enforcement (allowed-tools validation)
+### v0.3 (Released) 🚀
+- ✅ Script Execution Support (Python, Shell, JavaScript, Ruby, Perl)
+- ✅ Automatic script detection (recursive, up to 5 levels)
+- ✅ Security controls (path validation, permission checks, timeout enforcement)
+- ✅ Environment variable injection (SKILL_NAME, SKILL_BASE_DIR, SKILL_VERSION, SKILLKIT_VERSION)
+- ✅ LangChain script tool integration (each script exposed as separate StructuredTool)
+- ✅ Parameters normalization to lower-case
+- ✅ Comprehensive error handling and audit logging
+- ✅ Cross-platform support (Linux, macOS, Windows)
+- ✅ Backward compatible with v0.1/v0.2 (except ToolRestrictionError removed)
+
+### v0.4 (In progress)
+- Advanced arguments schemas for scripts
+- Skill versioning and compatibility checks
+- Improved progressive disclosure 
+
+### v0.5 (Planned)
 - Additional framework integrations (LlamaIndex, CrewAI, Haystack)
 
-### v0.4 (Planned)
-- Advanced arguments schemas
-- Skill versioning and compatibility checks
+### v0.6 (Planned)
+- Scripts permissions enforcement
 - Enhanced error handling and recovery
 - Performance optimizations
+- Skill name enforcement and controls
 
 ### v1.0 (Planned)
 - Comprehensive documentation
