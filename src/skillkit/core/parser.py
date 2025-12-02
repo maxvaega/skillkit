@@ -230,9 +230,7 @@ class SkillParser:
 
         return tuple(tools)
 
-    def _extract_version(
-        self, frontmatter: Dict[str, Any], skill_path: Path
-    ) -> str | None:
+    def _extract_version(self, frontmatter: Dict[str, Any], skill_path: Path) -> str | None:
         """Extract and validate optional version field.
 
         Args:

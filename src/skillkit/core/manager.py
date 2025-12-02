@@ -914,13 +914,14 @@ class SkillManager:
             Cleared 3 entries
         """
         try:
-            loop = asyncio.get_running_loop()
+            asyncio.get_running_loop()
         except RuntimeError:
             # No event loop running, create temporary one
             return asyncio.run(self._cache.clear(skill_name))
         else:
             # Event loop already running, schedule as task
             import concurrent.futures
+
             with concurrent.futures.ThreadPoolExecutor() as pool:
                 future = pool.submit(asyncio.run, self._cache.clear(skill_name))
                 return future.result()
@@ -988,7 +989,7 @@ class SkillManager:
 
         # Check cache (use asyncio.run for async cache access)
         try:
-            loop = asyncio.get_running_loop()
+            asyncio.get_running_loop()
             # Event loop already running, cannot use asyncio.run
             # Fall back to sync processing without cache
             logger.warning(
@@ -1014,17 +1015,12 @@ class SkillManager:
             raw_content = file_path.read_text(encoding="utf-8-sig")
         except FileNotFoundError as e:
             raise ContentLoadError(
-                f"Skill file not found: {file_path}. "
-                f"File may have been deleted after discovery."
+                f"Skill file not found: {file_path}. File may have been deleted after discovery."
             ) from e
         except PermissionError as e:
-            raise ContentLoadError(
-                f"Permission denied reading skill: {file_path}"
-            ) from e
+            raise ContentLoadError(f"Permission denied reading skill: {file_path}") from e
         except UnicodeDecodeError as e:
-            raise ContentLoadError(
-                f"Skill file contains invalid UTF-8: {file_path}"
-            ) from e
+            raise ContentLoadError(f"Skill file contains invalid UTF-8: {file_path}") from e
 
         # Process content with base directory and arguments
         processed_content = process_skill_content(raw_content, base_dir, arguments)
@@ -1113,7 +1109,7 @@ class SkillManager:
 
             try:
                 # Load content asynchronously
-                async with aiofiles.open(file_path, 'r', encoding='utf-8-sig') as f:
+                async with aiofiles.open(file_path, encoding="utf-8-sig") as f:
                     raw_content = await f.read()
             except FileNotFoundError as e:
                 raise ContentLoadError(
@@ -1121,13 +1117,9 @@ class SkillManager:
                     f"File may have been deleted after discovery."
                 ) from e
             except PermissionError as e:
-                raise ContentLoadError(
-                    f"Permission denied reading skill: {file_path}"
-                ) from e
+                raise ContentLoadError(f"Permission denied reading skill: {file_path}") from e
             except UnicodeDecodeError as e:
-                raise ContentLoadError(
-                    f"Skill file contains invalid UTF-8: {file_path}"
-                ) from e
+                raise ContentLoadError(f"Skill file contains invalid UTF-8: {file_path}") from e
 
             # Process content with base directory and arguments
             processed_content = process_skill_content(raw_content, base_dir, arguments)

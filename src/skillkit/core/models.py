@@ -181,9 +181,7 @@ class ContentCache:
                 return count
             else:
                 # Clear specific skill
-                keys_to_remove = [
-                    key for key in self._cache.keys() if key[0] == skill_name
-                ]
+                keys_to_remove = [key for key in self._cache if key[0] == skill_name]
                 for key in keys_to_remove:
                     del self._cache[key]
                 return len(keys_to_remove)

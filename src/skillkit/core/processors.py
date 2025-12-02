@@ -21,7 +21,7 @@ from skillkit.core.exceptions import (
 logger = logging.getLogger(__name__)
 
 # Compile regex once at module level for efficient reuse
-_WHITESPACE_NORMALIZE = re.compile(r'\s+')
+_WHITESPACE_NORMALIZE = re.compile(r"\s+")
 
 
 def normalize_arguments(arguments: str | None) -> str:
@@ -63,7 +63,7 @@ def normalize_arguments(arguments: str | None) -> str:
     normalized = arguments.strip()
 
     # Collapse multiple spaces to single space
-    normalized = _WHITESPACE_NORMALIZE.sub(' ', normalized)
+    normalized = _WHITESPACE_NORMALIZE.sub(" ", normalized)
 
     return normalized
 
@@ -112,16 +112,18 @@ def process_skill_content(
     # 1. Prepend base directory context
     result = f"Base directory for this skill: {base_dir}\n\n"
     result += "Supporting files can be referenced using relative paths from this base directory.\n"
-    result += "Use FilePathResolver.resolve_path(base_dir, relative_path) to securely access files.\n\n"
+    result += (
+        "Use FilePathResolver.resolve_path(base_dir, relative_path) to securely access files.\n\n"
+    )
     result += content
 
     # 2. Handle arguments
     if arguments is None:
         return result  # No arguments provided
 
-    if '$ARGUMENTS' in result:
+    if "$ARGUMENTS" in result:
         # Replace all $ARGUMENTS placeholders (including empty string)
-        return result.replace('$ARGUMENTS', arguments)
+        return result.replace("$ARGUMENTS", arguments)
     elif arguments:  # Non-empty after normalization
         # Append arguments
         return f"{result}\n\nARGUMENTS: {arguments}"
