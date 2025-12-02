@@ -294,3 +294,4 @@ skillkit/
 
 ## Recent Changes
 - 001-advanced-progressive-disclosure: Added Python 3.10+ (minimum for full async support with aiofiles and asyncio) + PyYAML 6.0+ (YAML parsing), aiofiles 23.0+ (async file I/O), Python stdlib (pathlib, functools, dataclasses, typing, asyncio, logging)
+- 001-advanced-progressive-disclosure: Added Python 3.10+ (minimum for full async support with aiofiles and asyncio) + PyYAML 6.0+ (YAML parsing), aiofiles 23.0+ (async file I/O), Python stdlib (pathlib, functools, dataclasses, typing, asyncio, logging)
