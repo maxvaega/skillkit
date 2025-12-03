@@ -988,12 +988,7 @@ class ScriptExecutor:
         env["SKILL_NAME"] = skill_metadata.name
         env["SKILL_BASE_DIR"] = str(skill_base_dir)
         env["SKILLKIT_VERSION"] = skillkit.__version__
-
-        # Add version if available
-        if hasattr(skill_metadata, "version") and skill_metadata.version:
-            env["SKILL_VERSION"] = skill_metadata.version
-        else:
-            env["SKILL_VERSION"] = "0.0.0"
+        env["SKILL_VERSION"] = skill_metadata.version or "0.0.0"
 
         return env
 

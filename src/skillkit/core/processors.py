@@ -9,6 +9,7 @@ import logging
 import re
 import sys
 from abc import ABC, abstractmethod
+from pathlib import Path
 from string import Template
 from typing import Any, Dict, List
 
@@ -18,6 +19,125 @@ from skillkit.core.exceptions import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Compile regex once at module level for efficient reuse
+_WHITESPACE_NORMALIZE = re.compile(r"\s+")
+
+
+def normalize_arguments(arguments: str | None) -> str:
+    """Normalize argument string for cache key generation.
+
+    Rules:
+    - None → "" (empty string)
+    - Strip leading/trailing whitespace
+    - Collapse multiple consecutive spaces to single space
+    - Preserve case
+    - Empty string / whitespace-only → ""
+
+    Args:
+        arguments: User-provided argument string (may be None)
+
+    Returns:
+        Normalized argument string (never None)
+
+    Examples:
+        >>> normalize_arguments("file.pdf")
+        'file.pdf'
+        >>> normalize_arguments(" file.pdf ")
+        'file.pdf'
+        >>> normalize_arguments("a  b    c")
+        'a b c'
+        >>> normalize_arguments("   ")
+        ''
+        >>> normalize_arguments(None)
+        ''
+
+    Performance:
+        - O(n) where n = length of string
+        - ~1-2 microseconds for typical arguments
+    """
+    if arguments is None:
+        return ""
+
+    # Strip leading/trailing whitespace
+    normalized = arguments.strip()
+
+    # Collapse multiple spaces to single space
+    normalized = _WHITESPACE_NORMALIZE.sub(" ", normalized)
+
+    return normalized
+
+
+def process_skill_content(
+    content: str,
+    base_dir: Path,
+    arguments: str | None,
+) -> str:
+    """Process skill content with base directory context and argument substitution.
+
+    This is a standalone function that combines base directory injection and
+    argument substitution, optimized for use with caching systems.
+
+    Processing Steps:
+        1. Validate argument size (1MB limit)
+        2. Prepend base directory context
+        3. If arguments is None: return content with base dir only
+        4. If $ARGUMENTS exists: replace all instances with arguments (even if empty)
+        5. If no $ARGUMENTS and arguments non-empty: append "ARGUMENTS: {args}"
+
+    Args:
+        content: Raw skill content (excluding frontmatter)
+        base_dir: Skill base directory for file resolution context
+        arguments: User-provided arguments (may be None or empty)
+
+    Returns:
+        Processed content with base directory and arguments handled
+
+    Raises:
+        SizeLimitExceededError: If arguments exceed 1MB
+
+    Examples:
+        >>> content = "# My Skill\\nProcess $ARGUMENTS"
+        >>> process_skill_content(content, Path("/skills/my-skill"), "file.pdf")
+        'Base directory for this skill: /skills/my-skill\\n\\n...\\nProcess file.pdf'
+
+        >>> content = "# My Skill\\nGeneric task"
+        >>> process_skill_content(content, Path("/skills/my-skill"), "file.pdf")
+        'Base directory for this skill: /skills/my-skill\\n\\n...\\n\\nARGUMENTS: file.pdf'
+
+        >>> content = "# My Skill"
+        >>> process_skill_content(content, Path("/skills/my-skill"), None)
+        'Base directory for this skill: /skills/my-skill\\n\\n# My Skill'
+
+    Performance:
+        - ~1-5ms per invocation (dominated by string operations)
+        - No file I/O, pure in-memory processing
+    """
+    # 1. Validate argument size (1MB limit)
+    if arguments is not None and len(arguments.encode("utf-8")) > 1_000_000:
+        raise SizeLimitExceededError("Arguments exceed maximum size of 1000000 bytes")
+
+    # 2. Prepend base directory context
+    result = f"Base directory for this skill: {base_dir}\n\n"
+    result += "Supporting files can be referenced using relative paths from this base directory.\n"
+    result += (
+        "Use FilePathResolver.resolve_path(base_dir, relative_path) to securely access files.\n\n"
+    )
+    result += content
+
+    # 3. Handle arguments
+    if arguments is None:
+        return result  # No arguments provided
+
+    if "$ARGUMENTS" in result:
+        # Replace all $ARGUMENTS placeholders (including empty string)
+        return result.replace("$ARGUMENTS", arguments)
+    elif arguments:  # Non-empty after normalization
+        # Append arguments
+        return f"{result}\n\nARGUMENTS: {arguments}"
+    else:
+        # Empty arguments, no placeholder
+        return result
 
 
 class ContentProcessor(ABC):

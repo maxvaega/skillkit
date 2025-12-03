@@ -367,6 +367,69 @@ print(f"SKILLKIT_VERSION={os.environ.get('SKILLKIT_VERSION', 'MISSING')}")
         assert "SKILL_VERSION=" in result.stdout
         assert "SKILLKIT_VERSION=" in result.stdout
 
+    def test_skill_version_from_metadata(self, tmp_path):
+        """Test that SKILL_VERSION is correctly set from metadata.version."""
+        script_file = tmp_path / "version_test.py"
+        script_file.write_text('''
+import os
+print(f"SKILL_VERSION={os.environ.get('SKILL_VERSION', 'MISSING')}")
+''')
+
+        # Create SKILL.md file
+        skill_md = tmp_path / "SKILL.md"
+        skill_md.write_text("---\nname: test-skill\ndescription: Test skill\nversion: 1.2.3\n---\n")
+
+        # Create skill metadata with version
+        from skillkit.core.models import SkillMetadata
+        skill_metadata = SkillMetadata(
+            name="test-skill",
+            description="Test skill",
+            skill_path=tmp_path / "SKILL.md",
+            version="1.2.3"
+        )
+
+        executor = ScriptExecutor(timeout=5)
+        result = executor.execute(
+            script_path=script_file,
+            arguments={},
+            skill_base_dir=tmp_path,
+            skill_metadata=skill_metadata
+        )
+
+        assert result.exit_code == 0
+        assert "SKILL_VERSION=1.2.3" in result.stdout
+
+    def test_skill_version_defaults_to_zero(self, tmp_path):
+        """Test that SKILL_VERSION defaults to 0.0.0 when metadata.version is None."""
+        script_file = tmp_path / "version_default_test.py"
+        script_file.write_text('''
+import os
+print(f"SKILL_VERSION={os.environ.get('SKILL_VERSION', 'MISSING')}")
+''')
+
+        # Create SKILL.md file without version
+        skill_md = tmp_path / "SKILL.md"
+        skill_md.write_text("---\nname: test-skill\ndescription: Test skill\n---\n")
+
+        # Create skill metadata without version (defaults to None)
+        from skillkit.core.models import SkillMetadata
+        skill_metadata = SkillMetadata(
+            name="test-skill",
+            description="Test skill",
+            skill_path=tmp_path / "SKILL.md"
+        )
+
+        executor = ScriptExecutor(timeout=5)
+        result = executor.execute(
+            script_path=script_file,
+            arguments={},
+            skill_base_dir=tmp_path,
+            skill_metadata=skill_metadata
+        )
+
+        assert result.exit_code == 0
+        assert "SKILL_VERSION=0.0.0" in result.stdout
+
     def test_tool_restriction_enforcement_bash_allowed(self, tmp_path):
         """Test that scripts execute when Bash is in allowed-tools."""
         script_file = tmp_path / "allowed.py"

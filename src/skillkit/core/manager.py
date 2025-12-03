@@ -4,13 +4,19 @@ This module provides the SkillManager class, the main entry point for
 skill discovery, access, and invocation.
 """
 
+import asyncio
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List
 
+import aiofiles
+import aiofiles.os
+
 from skillkit.core.discovery import SkillDiscovery
 from skillkit.core.exceptions import ConfigurationError, SkillNotFoundError, SkillsUseError
 from skillkit.core.models import (
+    CacheStats,
+    ContentCache,
     InitMode,
     Skill,
     SkillMetadata,
@@ -18,6 +24,7 @@ from skillkit.core.models import (
     SourceType,
 )
 from skillkit.core.parser import SkillParser
+from skillkit.core.processors import normalize_arguments, process_skill_content
 
 if TYPE_CHECKING:
     from skillkit.core.scripts import ScriptExecutionResult
@@ -69,6 +76,7 @@ class SkillManager:
         plugin_dirs: List[Path | str] | None = None,
         additional_search_paths: List[Path | str] | None = None,
         default_script_timeout: int = 30,
+        max_cache_size: int = 100,
     ) -> None:
         """Initialize skill manager with flexible multi-source configuration.
 
@@ -98,6 +106,12 @@ class SkillManager:
                 - Used by execute_skill_script() when custom timeout not specified
                 - Valid range: 1-600 seconds
                 - Individual executions can override this value
+
+            max_cache_size: Maximum number of cached skill content entries (default: 100)
+                - Used for LRU cache of processed skill content
+                - Enables <1ms cache hits for repeated invocations
+                - Typical memory: ~2.1KB per entry, ~5MB cache overhead
+                - Increase for agents with many skills or diverse arguments
 
         Raises:
             ConfigurationError: When explicitly provided directory path doesn't exist
@@ -192,6 +206,11 @@ class SkillManager:
 
         # Script execution configuration (v0.3+)
         self.default_script_timeout = default_script_timeout
+
+        # Cache system (v0.4+)
+        self._cache = ContentCache(max_size=max_cache_size)
+        self._skill_locks: Dict[str, asyncio.Lock] = {}
+        self._locks_lock = asyncio.Lock()
 
         # Legacy v0.1 compatibility attribute
         self.skills_dir = (
@@ -827,8 +846,107 @@ class SkillManager:
 
         return Skill(metadata=metadata, base_directory=base_directory)
 
+    async def _get_file_mtime(self, file_path: Path) -> float:
+        """Get file modification time asynchronously.
+
+        Args:
+            file_path: Path to file
+
+        Returns:
+            Modification time as float (seconds since epoch)
+
+        Performance:
+            - <1ms (single stat() call)
+        """
+        stat_result = await aiofiles.os.stat(file_path)
+        return stat_result.st_mtime
+
+    async def _get_skill_lock(self, skill_name: str) -> asyncio.Lock:
+        """Get or create lock for a specific skill.
+
+        Uses a lock-protected dictionary to ensure thread-safe lock creation.
+
+        Args:
+            skill_name: Skill identifier
+
+        Returns:
+            asyncio.Lock for the skill
+
+        Performance:
+            - <1ms (fast lock acquisition + dict lookup)
+        """
+        async with self._locks_lock:
+            if skill_name not in self._skill_locks:
+                self._skill_locks[skill_name] = asyncio.Lock()
+            return self._skill_locks[skill_name]
+
+    def get_cache_stats(self) -> CacheStats:
+        """Get cache statistics snapshot.
+
+        Returns:
+            CacheStats with current metrics (size, hits, misses, hit_rate)
+
+        Example:
+            >>> stats = manager.get_cache_stats()
+            >>> print(f"Hit rate: {stats.hit_rate:.1%}")
+            Hit rate: 85.3%
+            >>> print(f"Cache usage: {stats.size}/{stats.max_size}")
+            Cache usage: 42/100
+        """
+        return self._cache.get_stats()
+
+    def clear_cache(self, skill_name: str | None = None) -> int:
+        """Clear cache entries (synchronous wrapper).
+
+        Args:
+            skill_name: Clear only this skill (default: clear all)
+
+        Returns:
+            Number of entries cleared
+
+        Note:
+            This is a synchronous wrapper around the async clear method.
+            It creates a new event loop if needed.
+
+        Example:
+            >>> cleared = manager.clear_cache("my-skill")
+            >>> print(f"Cleared {cleared} entries")
+            Cleared 3 entries
+        """
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            # No event loop running, create temporary one
+            return asyncio.run(self._cache.clear(skill_name))
+        else:
+            # Event loop already running, schedule as task
+            import concurrent.futures
+
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                future = pool.submit(asyncio.run, self._cache.clear(skill_name))
+                return future.result()
+
+    async def aclear_cache(self, skill_name: str | None = None) -> int:
+        """Clear cache entries (async version).
+
+        Args:
+            skill_name: Clear only this skill (default: clear all)
+
+        Returns:
+            Number of entries cleared
+
+        Example:
+            >>> cleared = await manager.aclear_cache("my-skill")
+            >>> print(f"Cleared {cleared} entries")
+            Cleared 3 entries
+        """
+        return await self._cache.clear(skill_name)
+
     def invoke_skill(self, name: str, arguments: str = "") -> str:
-        """Load and invoke skill in one call (convenience method).
+        """Load and invoke skill with caching (v0.4+).
+
+        Synchronous wrapper around async ainvoke_skill for backward compatibility.
+        Uses asyncio.run to execute the async caching logic.
 
         Args:
             name: Skill name (case-sensitive)
@@ -844,8 +962,12 @@ class SkillManager:
             SizeLimitExceededError: If arguments exceed 1MB
 
         Performance:
-            - Total: ~10-25ms overhead
-            - Breakdown: File I/O ~10-20ms + processing ~1-5ms
+            - Cache hit: <1ms (no file I/O)
+            - Cache miss: ~10-25ms (file I/O + processing + caching)
+
+        Caching Behavior:
+            - Same as ainvoke_skill()
+            - Cache shared between sync and async methods
 
         Example:
             >>> result = manager.invoke_skill("code-reviewer", "review main.py")
@@ -854,11 +976,65 @@ class SkillManager:
 
             Review the following code: review main.py
         """
-        skill = self.load_skill(name)
-        return skill.invoke(arguments)
+        # Get skill metadata
+        metadata = self.get_skill(name)
+        file_path = metadata.skill_path
+        base_dir = file_path.parent
+
+        # Normalize arguments for cache key
+        normalized_args = normalize_arguments(arguments)
+
+        # Get file mtime (synchronous)
+        current_mtime = file_path.stat().st_mtime
+
+        # Check cache (use asyncio.run for async cache access)
+        try:
+            asyncio.get_running_loop()
+            # Event loop already running, cannot use asyncio.run
+            # Fall back to sync processing without cache
+            logger.warning(
+                f"invoke_skill called from async context for skill '{name}'. "
+                f"Use ainvoke_skill() instead for optimal caching."
+            )
+            skill = self.load_skill(name)
+            return skill.invoke(arguments)
+        except RuntimeError:
+            # No event loop running, safe to use asyncio.run
+            pass
+
+        # Check cache using temporary event loop
+        cached_content = asyncio.run(self._cache.get(name, normalized_args, current_mtime))
+        if cached_content is not None:
+            return cached_content
+
+        # Cache miss - load and process content
+        from skillkit.core.exceptions import ContentLoadError
+
+        try:
+            # Load content synchronously
+            raw_content = file_path.read_text(encoding="utf-8-sig")
+        except FileNotFoundError as e:
+            raise ContentLoadError(
+                f"Skill file not found: {file_path}. File may have been deleted after discovery."
+            ) from e
+        except PermissionError as e:
+            raise ContentLoadError(f"Permission denied reading skill: {file_path}") from e
+        except UnicodeDecodeError as e:
+            raise ContentLoadError(f"Skill file contains invalid UTF-8: {file_path}") from e
+
+        # Process content with base directory and arguments
+        processed_content = process_skill_content(raw_content, base_dir, arguments)
+
+        # Store in cache
+        asyncio.run(self._cache.put(name, normalized_args, processed_content, current_mtime))
+
+        return processed_content
 
     async def ainvoke_skill(self, name: str, arguments: str = "") -> str:
-        """Async version of invoke_skill() for non-blocking invocation.
+        """Async version of invoke_skill() with caching (v0.4+).
+
+        Implements LRU cache with mtime-based invalidation and per-skill locking
+        for thread-safe concurrent invocations.
 
         Args:
             name: Skill name (case-sensitive)
@@ -875,16 +1051,23 @@ class SkillManager:
             SizeLimitExceededError: If arguments exceed 1MB
 
         Performance:
-            - Overhead: <2ms vs sync invoke_skill()
-            - Event loop remains responsive during file I/O
-            - Suitable for concurrent invocations (10+)
+            - Cache hit: <1ms (no file I/O)
+            - Cache miss: ~10-25ms (file I/O + processing + caching)
+            - Per-skill locking enables concurrent execution of different skills
+
+        Caching Behavior:
+            - Cache key: (skill_name, normalized_arguments)
+            - Cache invalidation: Automatic on file mtime change
+            - Normalization: Whitespace variations map to same cache entry
 
         Example:
+            >>> # First invocation - cache miss
             >>> result = await manager.ainvoke_skill("code-reviewer", "review main.py")
-            >>> print(result[:100])
-            Base directory for this skill: /Users/alice/.claude/skills/code-reviewer
+            >>> # ~25ms
 
-            Review the following code: review main.py
+            >>> # Second invocation - cache hit
+            >>> result2 = await manager.ainvoke_skill("code-reviewer", "review main.py")
+            >>> # <1ms
         """
         from skillkit.core.exceptions import AsyncStateError
 
@@ -901,9 +1084,50 @@ class SkillManager:
                 "Manager not initialized. Call adiscover() before invoking skills."
             )
 
-        # Load skill and invoke asynchronously
-        skill = self.load_skill(name)
-        return await skill.ainvoke(arguments)
+        # Get per-skill lock for thread-safe invocation
+        lock = await self._get_skill_lock(name)
+
+        async with lock:
+            # Get skill metadata
+            metadata = self.get_skill(name)
+            file_path = metadata.skill_path
+            base_dir = file_path.parent
+
+            # Normalize arguments for cache key
+            normalized_args = normalize_arguments(arguments)
+
+            # Get file mtime for cache validation
+            current_mtime = await self._get_file_mtime(file_path)
+
+            # Check cache
+            cached_content = await self._cache.get(name, normalized_args, current_mtime)
+            if cached_content is not None:
+                return cached_content
+
+            # Cache miss - load and process content
+            from skillkit.core.exceptions import ContentLoadError
+
+            try:
+                # Load content asynchronously
+                async with aiofiles.open(file_path, encoding="utf-8-sig") as f:
+                    raw_content = await f.read()
+            except FileNotFoundError as e:
+                raise ContentLoadError(
+                    f"Skill file not found: {file_path}. "
+                    f"File may have been deleted after discovery."
+                ) from e
+            except PermissionError as e:
+                raise ContentLoadError(f"Permission denied reading skill: {file_path}") from e
+            except UnicodeDecodeError as e:
+                raise ContentLoadError(f"Skill file contains invalid UTF-8: {file_path}") from e
+
+            # Process content with base directory and arguments
+            processed_content = process_skill_content(raw_content, base_dir, arguments)
+
+            # Store in cache with original arguments (already normalized for key)
+            await self._cache.put(name, normalized_args, processed_content, current_mtime)
+
+            return processed_content
 
     def execute_skill_script(
         self,

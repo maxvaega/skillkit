@@ -92,6 +92,7 @@ class SkillParser:
 
         # Extract optional fields
         allowed_tools = self._extract_allowed_tools(frontmatter_dict, skill_path)
+        version = self._extract_version(frontmatter_dict, skill_path)
 
         logger.debug(f"Successfully parsed skill '{name}' from {skill_path.parent.name}")
 
@@ -100,6 +101,7 @@ class SkillParser:
             description=description,
             skill_path=skill_path,
             allowed_tools=allowed_tools,
+            version=version,
         )
 
     def _extract_frontmatter(self, content: str, skill_path: Path) -> Dict[str, Any]:
@@ -228,6 +230,32 @@ class SkillParser:
 
         return tuple(tools)
 
+    def _extract_version(self, frontmatter: Dict[str, Any], skill_path: Path) -> str | None:
+        """Extract and validate optional version field.
+
+        Args:
+            frontmatter: Parsed frontmatter dictionary
+            skill_path: Path to skill file (for error messages)
+
+        Returns:
+            Version string if present, None otherwise. Accepts any string format.
+        """
+        if "version" not in frontmatter:
+            return None
+
+        version = frontmatter["version"]
+
+        # Accept any string value (no format validation per user requirements)
+        if not isinstance(version, str):
+            logger.warning(
+                f"Field 'version' should be a string, got {type(version).__name__} in {skill_path}. "
+                f"Using None."
+            )
+            return None
+
+        # Return version as-is (strip whitespace for consistency)
+        return version.strip() if version.strip() else None
+
     def _check_for_typos(self, frontmatter: Dict[str, Any], skill_path: Path) -> None:
         """Check for common field name typos and log warnings.
 
@@ -240,7 +268,7 @@ class SkillParser:
                 logger.warning(f"Possible typo in {skill_path}: '{typo}' should be '{correct}'")
 
         # Log unknown fields for forward compatibility
-        known_fields = {"name", "description", "allowed-tools"}
+        known_fields = {"name", "description", "allowed-tools", "version"}
         unknown_fields = set(frontmatter.keys()) - known_fields
         if unknown_fields:
             logger.debug(

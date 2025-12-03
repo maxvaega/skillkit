@@ -12,6 +12,7 @@ from skillkit.core.processors import (
     BaseDirectoryProcessor,
     ArgumentSubstitutionProcessor,
     CompositeProcessor,
+    normalize_arguments,
 )
 from skillkit.core.exceptions import (
     SizeLimitExceededError,
@@ -265,3 +266,128 @@ def test_substitute_arguments_empty_with_placeholder():
 
     assert result == "Task:  (end)"
     assert "$ARGUMENTS" not in result
+
+
+# ==============================================================================
+# Phase 4: User Story 2 - Argument Normalization (T024)
+# ==============================================================================
+# These tests validate the normalize_arguments() function for cache efficiency
+
+
+def test_normalize_arguments_no_whitespace():
+    """Validate arguments without whitespace remain unchanged.
+
+    Tests that clean argument strings pass through normalization
+    without modification.
+    """
+    result = normalize_arguments("file.pdf")
+    assert result == "file.pdf"
+
+
+def test_normalize_arguments_leading_whitespace():
+    """Validate leading whitespace is stripped.
+
+    Tests that spaces at the start of arguments are removed.
+    """
+    result = normalize_arguments(" file.pdf")
+    assert result == "file.pdf"
+
+
+def test_normalize_arguments_trailing_whitespace():
+    """Validate trailing whitespace is stripped.
+
+    Tests that spaces at the end of arguments are removed.
+    """
+    result = normalize_arguments("file.pdf ")
+    assert result == "file.pdf"
+
+
+def test_normalize_arguments_both_whitespace():
+    """Validate leading and trailing whitespace both stripped.
+
+    Tests that spaces at both ends are removed simultaneously.
+    """
+    result = normalize_arguments(" file.pdf ")
+    assert result == "file.pdf"
+
+
+def test_normalize_arguments_multiple_spaces_collapsed():
+    """Validate multiple consecutive spaces collapsed to single space.
+
+    Tests that multiple spaces within arguments are normalized
+    to single spaces.
+    """
+    result = normalize_arguments("a  b    c")
+    assert result == "a b c"
+
+
+def test_normalize_arguments_tabs_and_newlines():
+    """Validate tabs and newlines treated as whitespace.
+
+    Tests that all whitespace characters (tabs, newlines, etc.)
+    are normalized to single spaces.
+    """
+    result = normalize_arguments("a\tb\n\nc")
+    assert result == "a b c"
+
+
+def test_normalize_arguments_whitespace_only():
+    """Validate whitespace-only arguments become empty string.
+
+    Tests that arguments containing only whitespace are
+    normalized to empty string.
+    """
+    result = normalize_arguments("   ")
+    assert result == ""
+
+
+def test_normalize_arguments_none_becomes_empty():
+    """Validate None arguments become empty string.
+
+    Tests that None is normalized to empty string for
+    consistent cache key generation.
+    """
+    result = normalize_arguments(None)
+    assert result == ""
+
+
+def test_normalize_arguments_empty_string():
+    """Validate empty string remains empty string.
+
+    Tests that empty arguments remain unchanged.
+    """
+    result = normalize_arguments("")
+    assert result == ""
+
+
+def test_normalize_arguments_case_preserved():
+    """Validate case is preserved during normalization.
+
+    Tests that upper and lower case letters are not modified,
+    only whitespace is normalized.
+    """
+    result = normalize_arguments(" File.PDF ")
+    assert result == "File.PDF"
+    assert result != "file.pdf"
+
+
+@pytest.mark.parametrize("input_args,expected", [
+    ("file.pdf", "file.pdf"),
+    (" file.pdf", "file.pdf"),
+    ("file.pdf ", "file.pdf"),
+    (" file.pdf ", "file.pdf"),
+    ("  file.pdf  ", "file.pdf"),
+    ("a  b", "a b"),
+    ("a   b   c", "a b c"),
+    ("   ", ""),
+    ("", ""),
+    (None, ""),
+])
+def test_normalize_arguments_parametrized(input_args, expected):
+    """Parametrized test for normalize_arguments with various inputs.
+
+    Tests multiple normalization scenarios to ensure consistent
+    behavior across different whitespace patterns.
+    """
+    result = normalize_arguments(input_args)
+    assert result == expected

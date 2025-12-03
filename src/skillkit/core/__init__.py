@@ -20,13 +20,15 @@ from skillkit.core.exceptions import (
     SuspiciousInputError,
 )
 from skillkit.core.manager import SkillManager
-from skillkit.core.models import Skill, SkillMetadata
+from skillkit.core.models import CacheStats, ContentCache, Skill, SkillMetadata
 from skillkit.core.parser import SkillParser
 from skillkit.core.processors import (
     ArgumentSubstitutionProcessor,
     BaseDirectoryProcessor,
     CompositeProcessor,
     ContentProcessor,
+    normalize_arguments,
+    process_skill_content,
 )
 
 __all__ = [
@@ -36,11 +38,16 @@ __all__ = [
     "Skill",
     "SkillDiscovery",
     "SkillParser",
+    # Cache
+    "ContentCache",
+    "CacheStats",
     # Processors
     "ContentProcessor",
     "BaseDirectoryProcessor",
     "ArgumentSubstitutionProcessor",
     "CompositeProcessor",
+    "normalize_arguments",
+    "process_skill_content",
     # Exceptions
     "SkillsUseError",
     "SkillParsingError",

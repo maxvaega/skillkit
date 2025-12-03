@@ -4,7 +4,9 @@ This module defines the SkillMetadata and Skill dataclasses that implement
 the progressive disclosure pattern for memory-efficient skill management.
 """
 
+import asyncio
 import sys
+from collections import OrderedDict
 from dataclasses import dataclass, field
 from enum import Enum
 from functools import cached_property
@@ -19,6 +21,191 @@ if TYPE_CHECKING:
 # Note: Project requires Python 3.10+ (per pyproject.toml), so slots=True is safe
 # The variable is kept for documentation purposes
 PYTHON_310_PLUS = sys.version_info >= (3, 10)
+
+
+@dataclass(frozen=True, slots=True)
+class CacheStats:
+    """Cache statistics snapshot.
+
+    Provides read-only metrics about cache performance and usage.
+    All fields are immutable after creation.
+
+    Attributes:
+        size: Current number of cached entries
+        max_size: Maximum cache capacity
+        hits: Total cache hits since creation
+        misses: Total cache misses since creation
+        hit_rate: Calculated hit rate (hits / total requests, 0.0-1.0)
+
+    Memory: ~80 bytes per instance
+    """
+
+    size: int
+    max_size: int
+    hits: int
+    misses: int
+    hit_rate: float
+
+
+class ContentCache:
+    """LRU cache for processed skill content with mtime-based invalidation.
+
+    Thread-safe for concurrent async access via asyncio.Lock. Implements
+    Least Recently Used (LRU) eviction policy using OrderedDict.
+
+    Cache Key: (skill_name: str, normalized_arguments: str)
+    Cache Value: (processed_content: str, file_mtime: float)
+
+    Performance:
+        - get(): O(1) with mtime validation
+        - put(): O(1) with LRU eviction
+        - clear(): O(n) for specific skill, O(1) for all
+
+    Memory: ~2.1KB per cached entry (typical), ~5KB cache overhead
+
+    Example:
+        >>> cache = ContentCache(max_size=100)
+        >>> await cache.put("skill-a", "args", "content", 1000.0)
+        >>> content = await cache.get("skill-a", "args", 1000.0)  # Cache hit
+        >>> content = await cache.get("skill-a", "args", 2000.0)  # Cache miss (stale)
+    """
+
+    def __init__(self, max_size: int = 100) -> None:
+        """Initialize cache with maximum size.
+
+        Args:
+            max_size: Maximum number of entries (default 100)
+
+        Raises:
+            ValueError: If max_size <= 0
+        """
+        if max_size <= 0:
+            raise ValueError(f"max_size must be positive, got: {max_size}")
+
+        # Cache storage: (skill_name, normalized_args) -> (content, mtime)
+        self._cache: OrderedDict[tuple[str, str], tuple[str, float]] = OrderedDict()
+        self._max_size: int = max_size
+        self._hits: int = 0
+        self._misses: int = 0
+        self._lock: asyncio.Lock = asyncio.Lock()
+
+    async def get(
+        self,
+        skill_name: str,
+        arguments: str,
+        file_mtime: float,
+    ) -> str | None:
+        """Get cached content if valid (mtime check).
+
+        Args:
+            skill_name: Skill identifier
+            arguments: Normalized argument string
+            file_mtime: Current file modification time
+
+        Returns:
+            Cached content if valid, None if miss or stale
+
+        Performance:
+            - Cache hit (valid mtime): <1ms
+            - Cache miss or stale: <1ms + invalidation overhead
+        """
+        async with self._lock:
+            key = (skill_name, arguments)
+            if key in self._cache:
+                content, cached_mtime = self._cache[key]
+                if cached_mtime >= file_mtime:
+                    # Valid cache entry - mark as recently used
+                    self._cache.move_to_end(key)
+                    self._hits += 1
+                    return content
+                else:
+                    # Stale entry - invalidate
+                    del self._cache[key]
+
+            self._misses += 1
+            return None
+
+    async def put(
+        self,
+        skill_name: str,
+        arguments: str,
+        content: str,
+        file_mtime: float,
+    ) -> None:
+        """Store processed content with mtime.
+
+        Implements LRU eviction when cache is full.
+
+        Args:
+            skill_name: Skill identifier
+            arguments: Normalized argument string
+            content: Processed skill content
+            file_mtime: File modification time at processing
+
+        Performance:
+            - Without eviction: <1ms
+            - With eviction: <1ms (removes oldest entry)
+        """
+        async with self._lock:
+            key = (skill_name, arguments)
+
+            # Remove old entry if exists
+            if key in self._cache:
+                del self._cache[key]
+
+            # Evict oldest entry if at capacity
+            elif len(self._cache) >= self._max_size:
+                self._cache.popitem(last=False)
+
+            # Add new entry (most recent)
+            self._cache[key] = (content, file_mtime)
+
+    async def clear(self, skill_name: str | None = None) -> int:
+        """Clear cache entries.
+
+        Args:
+            skill_name: Clear only this skill (default: clear all)
+
+        Returns:
+            Number of entries cleared
+
+        Performance:
+            - Clear all: O(1)
+            - Clear specific: O(n) where n = total cache size
+        """
+        async with self._lock:
+            if skill_name is None:
+                # Clear all
+                count = len(self._cache)
+                self._cache.clear()
+                return count
+            else:
+                # Clear specific skill
+                keys_to_remove = [key for key in self._cache if key[0] == skill_name]
+                for key in keys_to_remove:
+                    del self._cache[key]
+                return len(keys_to_remove)
+
+    def get_stats(self) -> CacheStats:
+        """Get cache statistics snapshot.
+
+        Returns:
+            CacheStats with current metrics
+
+        Note:
+            This method is synchronous and does not acquire the lock.
+            Statistics may be approximate during concurrent operations.
+        """
+        total = self._hits + self._misses
+        hit_rate = self._hits / total if total > 0 else 0.0
+
+        return CacheStats(
+            size=len(self._cache),
+            max_size=self._max_size,
+            hits=self._hits,
+            misses=self._misses,
+            hit_rate=hit_rate,
+        )
 
 
 class SourceType(str, Enum):
@@ -70,12 +257,14 @@ class SkillMetadata:
         description: Human-readable description of skill purpose
         skill_path: Absolute path to SKILL.md file
         allowed_tools: Tool names allowed for this skill (optional, not enforced in v0.1)
+        version: Skill version string (optional, defaults to None if not specified in SKILL.md)
     """
 
     name: str
     description: str
     skill_path: Path
     allowed_tools: tuple[str, ...] = field(default_factory=tuple)
+    version: str | None = None
 
     def __post_init__(self) -> None:
         """Validate skill path exists on construction.
