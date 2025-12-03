@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "skillkit"
-version = "0.3.1"
+version = "0.4.0"
 description = "Python library implementing Anthropic's Agent Skills functionality for LLM-powered agents"
 readme = "README.md"
 license = {text = "MIT"}

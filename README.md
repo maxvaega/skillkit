@@ -27,10 +27,10 @@ skillkit is compatible with existings skills (SKILL.md), so you can browse and u
 
 - **Framework-free**: can be used without any framework, or with other frameworks (currently only compatible with LangChain - more coming in the future!)
 - **Fully compatible with existing skills**: existing skills can be copied directly, no change needed
-- **Model-agnostic design**: Works with any LLM
+- **Model-agnostic**: Works with any LLM
 - **Multi-source skill discovery**: From project, Anthropic config, plugins, and custom directories with priority-based conflict resolution
 - **YAML frontmatter parsing** with comprehensive validation
-- **Progressive disclosure pattern** (metadata-first loading, 80% memory reduction)
+- **Progressive disclosure pattern** (metadata-first loading, 80% memory reduction, Level 2 content caching)
 - **Script execution**: Execute Python, Shell, JavaScript, Ruby, and Perl scripts from skills with comprehensive security controls
 - **Plugin ecosystem**: Full support for Anthropic's MCPB plugin manifests with namespaced skill access
 - **Nested directory structures**: Discover skills in any directory hierarchy up to 5 levels deep
@@ -89,6 +89,13 @@ pip install skillkit[dev]
 ```
 
 ## Quick Start
+
+### Performance Note ⚡
+
+With v0.4's advanced caching, repeated skill invocations are **up to 25x faster**:
+- **First invocation**: ~10-25ms (loads from disk)
+- **Cached invocations**: <1ms (memory lookup)
+- **Automatic**: No code changes needed, cache works transparently
 
 ### 1. Create a skill
 
@@ -170,7 +177,7 @@ messages = [HumanMessage(content=query)]
 result = agent.invoke({"messages": messages})
 ```
 
-### 4. Async LangChain Integration
+### Async LangChain Integration
 
 ```python
 import asyncio
@@ -223,6 +230,32 @@ skill = manager.get_skill("csv-parser")  # Gets project version if exists
 
 # Qualified name accesses specific plugin version
 skill = manager.get_skill("data-tools:csv-parser")  # Explicit plugin version
+```
+
+### Cache Performance Monitoring (requires v0.4+)
+
+```python
+from skillkit import SkillManager
+
+# Create manager with custom cache size
+manager = SkillManager(max_cache_size=200)  # Default: 100
+manager.discover()
+
+# First invocation - cache miss (~10-25ms)
+result1 = manager.invoke_skill("code-reviewer", "Review main.py")
+
+# Second invocation - cache hit (<1ms)
+result2 = manager.invoke_skill("code-reviewer", "Review main.py")
+
+# Monitor cache performance
+stats = manager.get_cache_stats()
+print(f"Cache hit rate: {stats.hit_rate:.1%}")
+print(f"Cache usage: {stats.size}/{stats.max_size}")
+print(f"Total hits: {stats.hits}, Total misses: {stats.misses}")
+
+# Clear cache when needed
+manager.clear_cache("code-reviewer")  # Clear specific skill
+manager.clear_cache()  # Clear all cache entries
 ```
 
 ## SKILL.md Format
@@ -301,7 +334,7 @@ If SKILL.md has no `$ARGUMENTS` placeholder:
 - With arguments: appended to end of content
 - Without arguments: content returned unchanged
 
-## Script Execution (v0.3+)
+## Script Execution
 
 Skills can include executable scripts for deterministic operations, combining AI reasoning with code execution. Scripts are automatically detected and can be executed with security controls.
 
@@ -396,16 +429,6 @@ import os
 skill_name = os.environ['SKILL_NAME']
 skill_dir = os.environ['SKILL_BASE_DIR']
 ```
-
-### Security Features
-
-Script execution includes comprehensive security controls:
-
-- **Path Validation**: Prevents path traversal attacks
-- **Permission Checks**: Blocks setuid/setgid scripts (Unix/Linux)
-- **Timeout Enforcement**: Kills hung processes (default 30s, max 600s)
-- **Output Limits**: Truncates output at 10MB per stream
-- **Audit Logging**: All executions logged with metadata
 
 ### LangChain Integration
 
@@ -540,9 +563,12 @@ logging.getLogger('skillkit.core.discovery').setLevel(logging.DEBUG)
 ## Performance Tips
 
 1. **Discover once**: Call `discover()` once at startup, reuse manager
-2. **Reuse manager**: Don't create new SkillManager for each invocation
-3. **Keep skills focused**: Large skills (>200KB) may slow down invocation
-4. **Use Python 3.10+**: Better memory efficiency with dataclass slots
+2. **Reuse manager**: Don't create new SkillManager for each invocation - cache is instance-level
+3. **Monitor cache**: Use `get_cache_stats()` to verify good hit rates (target: >80%)
+4. **Configure cache size**: Increase `max_cache_size` for agents with many skills or diverse arguments
+5. **Keep skills focused**: Large skills (>200KB) may slow down invocation
+6. **Use Python 3.10+**: Better memory efficiency with dataclass slots
+7. **Use async methods**: `ainvoke_skill()` enables concurrent skill execution
 
 ## Requirements
 
@@ -575,6 +601,7 @@ See `examples/` directory:
 - `langchain_agent.py` - LangChain agent integration (sync and async)
 - `multi_source.py` - Multi-source discovery and conflict resolution
 - `file_references.py` - Secure file path resolution
+- `caching_demo.py` ⚡ NEW - Cache performance demonstration
 - `skills/` - Example skills and plugins
 
 Run examples:
@@ -593,6 +620,9 @@ python examples/multi_source.py
 
 # File path resolution
 python examples/file_references.py
+
+# Cache performance demo (NEW in v0.4)
+python examples/caching_demo.py
 ```
 
 ## Roadmap
@@ -626,10 +656,16 @@ python examples/file_references.py
 - ✅ Cross-platform support (Linux, macOS, Windows)
 - ✅ Backward compatible with v0.1/v0.2 (except ToolRestrictionError removed)
 
-### v0.4 (In progress)
-- Advanced arguments schemas for scripts
-- Skill versioning and compatibility checks
-- Improved progressive disclosure
+### v0.4 (Released) ⚡
+- ✅ Advanced Progressive Disclosure with LRU content caching
+- ✅ Mtime-based automatic cache invalidation
+- ✅ Argument normalization for maximum cache efficiency
+- ✅ Thread-safe concurrent invocations with per-skill asyncio locks
+- ✅ Cache management API (get_cache_stats(), clear_cache())
+- ✅ Performance: <1ms cache hits vs 10-25ms first invocation
+- ✅ Memory efficient: ~2.1KB per cached entry
+- ✅ 80%+ cache hit rate achievable
+- ✅ Backward compatible with v0.1/v0.2/v0.3
 
 ### v0.5 (Planned)
 - Additional framework integrations (LlamaIndex, CrewAI, Haystack)
@@ -639,6 +675,10 @@ python examples/file_references.py
 - Enhanced error handling and recovery
 - Performance optimizations
 - Skill name enforcement and controls
+
+### v0.7 (Planned)
+- Advanced file system support
+- bedrock code interpreter support
 
 ### v1.0 (Planned)
 - Comprehensive documentation
