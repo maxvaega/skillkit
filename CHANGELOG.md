@@ -49,6 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Error messages**: Enhanced context for cache-related operations
 - **Type hints**: Full type coverage for new cache components
 - **Documentation**: New example `examples/caching_demo.py` demonstrating cache efficiency
+- **Basic Documentation** Created `docs/` folder with simple documentation
 
 ## [0.3.0] - 2025-12-01
 - Script Execution Support (Python, Shell, JavaScript, Ruby, Perl)
