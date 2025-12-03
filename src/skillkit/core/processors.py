@@ -115,9 +115,7 @@ def process_skill_content(
     """
     # 1. Validate argument size (1MB limit)
     if arguments is not None and len(arguments.encode("utf-8")) > 1_000_000:
-        raise SizeLimitExceededError(
-            "Arguments exceed maximum size of 1000000 bytes"
-        )
+        raise SizeLimitExceededError("Arguments exceed maximum size of 1000000 bytes")
 
     # 2. Prepend base directory context
     result = f"Base directory for this skill: {base_dir}\n\n"
