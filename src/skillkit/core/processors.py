@@ -79,10 +79,11 @@ def process_skill_content(
     argument substitution, optimized for use with caching systems.
 
     Processing Steps:
-        1. Prepend base directory context
-        2. If arguments is None: return content with base dir only
-        3. If $ARGUMENTS exists: replace all instances with arguments (even if empty)
-        4. If no $ARGUMENTS and arguments non-empty: append "ARGUMENTS: {args}"
+        1. Validate argument size (1MB limit)
+        2. Prepend base directory context
+        3. If arguments is None: return content with base dir only
+        4. If $ARGUMENTS exists: replace all instances with arguments (even if empty)
+        5. If no $ARGUMENTS and arguments non-empty: append "ARGUMENTS: {args}"
 
     Args:
         content: Raw skill content (excluding frontmatter)
@@ -91,6 +92,9 @@ def process_skill_content(
 
     Returns:
         Processed content with base directory and arguments handled
+
+    Raises:
+        SizeLimitExceededError: If arguments exceed 1MB
 
     Examples:
         >>> content = "# My Skill\\nProcess $ARGUMENTS"
@@ -109,7 +113,13 @@ def process_skill_content(
         - ~1-5ms per invocation (dominated by string operations)
         - No file I/O, pure in-memory processing
     """
-    # 1. Prepend base directory context
+    # 1. Validate argument size (1MB limit)
+    if arguments is not None and len(arguments.encode("utf-8")) > 1_000_000:
+        raise SizeLimitExceededError(
+            f"Arguments exceed maximum size of 1000000 bytes"
+        )
+
+    # 2. Prepend base directory context
     result = f"Base directory for this skill: {base_dir}\n\n"
     result += "Supporting files can be referenced using relative paths from this base directory.\n"
     result += (
@@ -117,7 +127,7 @@ def process_skill_content(
     )
     result += content
 
-    # 2. Handle arguments
+    # 3. Handle arguments
     if arguments is None:
         return result  # No arguments provided
 
