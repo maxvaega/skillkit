@@ -25,6 +25,9 @@ skillkit is compatible with existings skills (SKILL.md), so you can browse and u
 
 ## Features
 
+[![Run in Smithery](https://smithery.ai/badge/skills/maxvaega)](https://smithery.ai/skills?ns=maxvaega&utm_source=github&utm_medium=badge)
+
+
 - **Fully compatible with existing skills**: existing skills can be copied directly, no change needed
 - **Framework-free**: can be used without any framework, or with other frameworks (currently only compatible with LangChain - more coming in the future!)
 - **Model-agnostic**: Works with any LLM
