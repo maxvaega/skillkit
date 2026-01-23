@@ -284,6 +284,8 @@ skillkit/
 - Python 3.10+ (minimum for existing skillkit v0.3.0 compatibility) + PyYAML 6.0+ (existing), subprocess (stdlib), pathlib (stdlib), json (stdlib) (001-script-execution)
 - Python 3.10+ (minimum for full async support with aiofiles and asyncio) + PyYAML 6.0+ (YAML parsing), aiofiles 23.0+ (async file I/O), Python stdlib (pathlib, functools, dataclasses, typing, asyncio, logging) (001-advanced-progressive-disclosure)
 - Filesystem-based (SKILL.md files in `.claude/skills/` directories, in-memory LRU cache for processed content) (001-advanced-progressive-disclosure)
+- Python 3.10+ (minimum for skillkit compatibility) + PyYAML 6.0+, aiofiles 23.0+, langchain-core 0.1.0+ (optional), langchain-community (optional, for ShellTool) (001-align-claude-skills-design)
+- Filesystem-based (SKILL.md files, Python scripts in skills directories) (001-align-claude-skills-design)
 
 ## Quick Reference for AI Agents
 
@@ -324,5 +326,6 @@ skillkit/
 5. **Security first**: Always validate paths, sanitize inputs, use safe YAML loading
 
 ## Recent Changes
+- 001-align-claude-skills-design: Added Python 3.10+ (minimum for skillkit compatibility) + PyYAML 6.0+, aiofiles 23.0+, langchain-core 0.1.0+ (optional), langchain-community (optional, for ShellTool)
 - 001-advanced-progressive-disclosure: Added Python 3.10+ (minimum for full async support with aiofiles and asyncio) + PyYAML 6.0+ (YAML parsing), aiofiles 23.0+ (async file I/O), Python stdlib (pathlib, functools, dataclasses, typing, asyncio, logging)
 - 001-advanced-progressive-disclosure: Added Python 3.10+ (minimum for full async support with aiofiles and asyncio) + PyYAML 6.0+ (YAML parsing), aiofiles 23.0+ (async file I/O), Python stdlib (pathlib, functools, dataclasses, typing, asyncio, logging)
