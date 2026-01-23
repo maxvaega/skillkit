@@ -15,7 +15,6 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from skillkit.core.processors import CompositeProcessor
-    from skillkit.core.scripts import ScriptMetadata
 
 # Check Python version for slots support on all dataclasses
 # Note: Project requires Python 3.10+ (per pyproject.toml), so slots=True is safe
@@ -290,13 +289,11 @@ class Skill:
         metadata: Lightweight metadata from discovery phase
         base_directory: Base directory context for skill execution
         _processor: Content processor chain (initialized in __post_init__)
-        _scripts: Cached detected scripts (lazy-loaded, v0.3+)
     """
 
     metadata: SkillMetadata
     base_directory: Path
     _processor: "CompositeProcessor" = field(init=False, repr=False)
-    _scripts: "list[ScriptMetadata] | None" = field(default=None, init=False, repr=False)
 
     def __post_init__(self) -> None:
         """Initialize processor chain (avoids inline imports anti-pattern).
@@ -462,43 +459,28 @@ class Skill:
         }
         return self._processor.process(content, context)
 
-    @property
-    def scripts(self) -> "list[ScriptMetadata]":
-        """Lazy load detected scripts (v0.3+).
+    def __getattr__(self, name: str) -> None:
+        """Provide helpful error message for removed `scripts` property.
 
-        Scripts are detected once on first access and cached for the skill's lifetime.
-        Detection scans the skill's scripts/ directory and root directory for executable
-        scripts (.py, .sh, .js, .rb, .pl).
-
-        Returns:
-            List of ScriptMetadata instances (may be empty if no scripts found)
+        Args:
+            name: Attribute name being accessed
 
         Raises:
-            ScriptDetectionError: If script detection fails critically
-
-        Performance:
-            - First access: ~5-10ms (directory scanning + description extraction)
-            - Subsequent: <1μs (cached)
+            AttributeError: With migration guidance for `scripts` attribute
 
         Example:
-            >>> skill.scripts
-            [ScriptMetadata(name='extract', path=Path('scripts/extract.py'), ...)]
+            >>> skill.scripts  # doctest: +SKIP
+            AttributeError: 'Skill' object has no attribute 'scripts'.
+            Script discovery has been removed in v0.5...
         """
-        # Return cached scripts if already detected
-        if self._scripts is not None:
-            return self._scripts
-
-        # Import ScriptDetector only when needed (circular dependency prevention)
-        from skillkit.core.scripts import ScriptDetector
-
-        # Detect scripts and cache results
-        detector = ScriptDetector()
-        scripts = detector.detect_scripts(self.base_directory)
-
-        # Use object.__setattr__ because dataclass is frozen
-        object.__setattr__(self, "_scripts", scripts)
-
-        return scripts
+        if name == "scripts":
+            raise AttributeError(
+                "'Skill' object has no attribute 'scripts'. "
+                "Script discovery has been removed in v0.5. Use manager.execute_skill_script() "
+                "for direct execution or add ShellTool to your LangChain agent for instruction-based execution. "
+                "See migration guide: https://github.com/anthropics/skillkit/blob/main/MIGRATION.md"
+            )
+        raise AttributeError(f"'Skill' object has no attribute '{name}'")
 
 
 @dataclass(frozen=True, slots=True)

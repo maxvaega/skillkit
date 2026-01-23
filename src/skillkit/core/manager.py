@@ -1176,8 +1176,8 @@ class SkillManager:
             - All executions are logged for auditing
 
         Performance:
-            - Typical overhead: 10-50ms (path validation + subprocess spawn)
-            - Script detection is lazy (only runs when accessing skill.scripts)
+            - Typical overhead: 10-50ms (path validation + subprocess spawn + script detection)
+            - Script detection runs on each call (not cached)
             - Detection time: <10ms for skills with ≤50 scripts
 
         Example:
@@ -1198,7 +1198,7 @@ class SkillManager:
             Added in v0.3.0
         """
         from skillkit.core.exceptions import ScriptNotFoundError
-        from skillkit.core.scripts import ScriptExecutor
+        from skillkit.core.scripts import _ScriptDetector, ScriptExecutor
 
         # Validate manager is initialized
         if self._init_mode == InitMode.UNINITIALIZED:
@@ -1209,9 +1209,13 @@ class SkillManager:
         # Look up skill
         skill = self.load_skill(skill_name)
 
-        # Find script in skill's detected scripts (triggers lazy detection)
+        # Detect scripts using internal detector
+        detector = _ScriptDetector()
+        detected_scripts = detector.detect_scripts(skill.base_directory)
+
+        # Find script in detected scripts
         script_metadata = None
-        for script in skill.scripts:
+        for script in detected_scripts:
             if script.name == script_name:
                 script_metadata = script
                 break
@@ -1219,7 +1223,7 @@ class SkillManager:
         if script_metadata is None:
             raise ScriptNotFoundError(
                 f"Script '{script_name}' not found in skill '{skill_name}'. "
-                f"Available scripts: {', '.join(s.name for s in skill.scripts) or 'none'}"
+                f"Available scripts: {', '.join(s.name for s in detected_scripts) or 'none'}"
             )
 
         # Use provided timeout or fallback to default

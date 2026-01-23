@@ -254,3 +254,39 @@ def test_langchain_tool_error_propagation(temp_skills_dir, skill_factory):
     error_msg = str(exc_info.value)
     assert "exceed" in error_msg.lower() or "too large" in error_msg.lower()
     assert "1000000" in error_msg or "1048576" in error_msg or "1 MB" in error_msg or "1MB" in error_msg
+
+
+@pytest.mark.integration
+@pytest.mark.requires_langchain
+def test_prompt_tool_count(isolated_manager, skill_factory):
+    """Test that create_langchain_tools creates exactly one tool per skill (v0.5+).
+
+    Validates:
+        - One prompt-based tool created per skill
+        - No script tools generated (removed in v0.5)
+        - Tool names match skill names exactly (no __ separator)
+
+    This test verifies the v0.5 behavior where script tools are no longer
+    automatically generated. Skills should include script execution instructions
+    in their content, and agents should use ShellTool for execution.
+    """
+    # Create 3 skills
+    skill_factory("data-analyzer", "Analyzes data files", "Analysis content")
+    skill_factory("report-generator", "Generates reports", "Report content")
+    skill_factory("file-processor", "Processes files", "Processing content")
+
+    isolated_manager.discover()
+    tools = create_langchain_tools(isolated_manager)
+
+    # Verify exactly one tool per skill
+    assert len(tools) == 3, "Should create exactly one tool per skill"
+
+    # Verify tool names match skill names (no __ separator for scripts)
+    tool_names = [tool.name for tool in tools]
+    assert "data-analyzer" in tool_names
+    assert "report-generator" in tool_names
+    assert "file-processor" in tool_names
+
+    # Verify no script-style tools (with __ separator)
+    for tool_name in tool_names:
+        assert "__" not in tool_name, f"Tool name '{tool_name}' contains __ separator (script tools removed in v0.5)"

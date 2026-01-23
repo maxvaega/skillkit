@@ -5,26 +5,25 @@ scripts bundled with skills. Scripts enable deterministic operations like
 data transformation, file processing, and system integrations.
 
 Key Features:
-    - Automatic script detection in skill directories
+    - Internal script detection for execute_skill_script() API
     - Security validation (path traversal, permissions, etc.)
     - Multiple script types (Python, Shell, JavaScript, Ruby, Perl)
     - Timeout enforcement and output capture
     - Environment context injection
 
 Usage:
-    # Detect scripts in a skill
-    detector = ScriptDetector()
-    scripts = detector.detect_scripts(skill_base_dir)
+    # Execute a script via SkillManager (public API)
+    manager = SkillManager()
+    result = manager.execute_skill_script("skill-name", "script-name", {"arg": "value"})
 
-    # Execute a script
-    executor = ScriptExecutor(timeout=30)
-    result = executor.execute(script_path, arguments, skill_base_dir, skill_metadata)
+    # Internal script detection (not for public use)
+    detector = _ScriptDetector()
+    scripts = detector.detect_scripts(skill_base_dir)
 
 Classes:
     ScriptMetadata: Metadata for a detected script
     ScriptExecutionResult: Result of script execution
-    ScriptDescriptionExtractor: Extract descriptions from script comments
-    ScriptDetector: Detect scripts in skill directories
+    _ScriptDetector: Internal script detector (not public API)
     ScriptExecutor: Execute scripts with security controls
 
 Constants:
@@ -32,6 +31,7 @@ Constants:
 
 Version:
     Added in v0.3.0
+    Updated in v0.5.0 (removed script discovery from public API)
 """
 
 import json
@@ -132,24 +132,22 @@ def validate_tool_id(tool_id: str, skill_name: str, script_name: str) -> None:
 class ScriptMetadata:
     """Metadata for a detected executable script.
 
-    Created during lazy script detection (triggered on skill invocation).
-    Stored in Skill object for the skill's lifetime in memory.
+    Created during script detection for direct execution API.
+    Used internally by execute_skill_script() to validate script paths.
 
     Attributes:
         name: Script name (filename without extension)
         path: Relative path from skill base directory
         script_type: Script language/interpreter type
-        description: Script description extracted from first comment block
 
     Example:
         >>> meta = ScriptMetadata(
         ...     name='extract',
         ...     path=Path('scripts/extract.py'),
-        ...     script_type='python',
-        ...     description='Extract text from PDF files'
+        ...     script_type='python'
         ... )
         >>> meta.get_fully_qualified_name('pdf-extractor')
-        'pdf-extractor.extract'
+        'pdf-extractor__extract'
     """
 
     name: str
@@ -170,13 +168,6 @@ class ScriptMetadata:
 
     Values: 'python', 'shell', 'javascript', 'ruby', 'perl'
     Determined from file extension (.py → python, .sh → shell, etc.)
-    """
-
-    description: str
-    """Script description extracted from first comment block.
-
-    Extracted by parsing first comment block (#, //, \"\"\", etc.) up to 500 chars.
-    Empty string if no comments found.
     """
 
     def get_fully_qualified_name(self, skill_name: str) -> str:
@@ -374,166 +365,11 @@ def _get_script_type(file_path: Path) -> str:
     return mapping.get(ext, "unknown")
 
 
-class ScriptDescriptionExtractor:
-    """Extract script descriptions from first comment block.
+class _ScriptDetector:
+    """Internal script detector for execute_skill_script() API.
 
-    Supports multiple comment formats:
-        - Python: Docstrings (\"\"\"...\"\"\") and # comments
-        - Shell: # comments
-        - JavaScript: // and /* */ comments, JSDoc
-        - Ruby: # comments and =begin...=end
-        - Perl: # comments and POD (=pod...=cut)
-
-    Usage:
-        extractor = ScriptDescriptionExtractor()
-        description = extractor.extract(script_path, max_lines=50)
-
-    Version:
-        Added in v0.3.0
-    """
-
-    def __init__(self, max_chars: int = 500):
-        """Initialize extractor with character limit.
-
-        Args:
-            max_chars: Maximum characters to extract (default: 500)
-        """
-        self.max_chars = max_chars
-
-    def extract(self, script_path: Path, max_lines: int = 50) -> str:
-        """Extract description from script file.
-
-        Args:
-            script_path: Path to the script file
-            max_lines: Maximum lines to scan (default: 50)
-
-        Returns:
-            Extracted description (empty string if no comments found)
-
-        Example:
-            >>> extractor = ScriptDescriptionExtractor()
-            >>> desc = extractor.extract(Path('script.py'))
-            'This script processes data'
-        """
-        try:
-            with open(script_path, encoding="utf-8", errors="replace") as f:
-                lines = [f.readline() for _ in range(max_lines)]
-
-            script_type = _get_script_type(script_path)
-
-            if script_type == "python":
-                return self._extract_python_docstring(lines)
-            elif script_type in ("shell", "ruby", "perl"):
-                return self._extract_hash_comments(lines)
-            elif script_type == "javascript":
-                return self._extract_js_comments(lines)
-            else:
-                return ""
-
-        except (OSError, UnicodeDecodeError):
-            return ""
-
-    def _extract_python_docstring(self, lines: List[str]) -> str:
-        """Extract Python docstring or # comments."""
-        # Skip shebang and empty lines
-        start_idx = 0
-        for i, line in enumerate(lines):
-            stripped = line.strip()
-            if stripped and not stripped.startswith("#!"):
-                start_idx = i
-                break
-
-        # Check for docstring
-        if start_idx < len(lines):
-            first_line = lines[start_idx].strip()
-            if first_line.startswith('"""') or first_line.startswith("'''"):
-                quote = '"""' if first_line.startswith('"""') else "'''"
-                docstring_lines = []
-
-                # Single-line docstring
-                if first_line.count(quote) >= 2:
-                    return first_line.strip(quote).strip()[: self.max_chars]
-
-                # Multi-line docstring
-                for line in lines[start_idx + 1 :]:
-                    if quote in line:
-                        docstring_lines.append(line.split(quote)[0])
-                        break
-                    docstring_lines.append(line)
-
-                return " ".join(line.strip() for line in docstring_lines).strip()[: self.max_chars]
-
-        # Fallback to # comments
-        return self._extract_hash_comments(lines)
-
-    def _extract_hash_comments(self, lines: List[str]) -> str:
-        """Extract description from # comment lines."""
-        comments = []
-        started = False
-
-        for line in lines:
-            stripped = line.strip()
-
-            # Skip shebang
-            if stripped.startswith("#!"):
-                continue
-
-            # Start collecting comments
-            if stripped.startswith("#"):
-                started = True
-                comment = stripped.lstrip("#").strip()
-                if comment:
-                    comments.append(comment)
-            elif started and stripped:
-                # Stop at first non-comment, non-empty line
-                break
-
-        return " ".join(comments)[: self.max_chars]
-
-    def _extract_js_comments(self, lines: List[str]) -> str:
-        """Extract description from JavaScript // or /* */ comments."""
-        comments = []
-        in_block = False
-
-        for line in lines:
-            stripped = line.strip()
-
-            # Block comment start
-            if "/*" in stripped:
-                in_block = True
-                comment = stripped.split("/*", 1)[1]
-                if "*/" in comment:
-                    comment = comment.split("*/")[0]
-                    in_block = False
-                comments.append(comment.strip())
-                continue
-
-            # Block comment end
-            if in_block:
-                if "*/" in stripped:
-                    comment = stripped.split("*/")[0]
-                    comments.append(comment.strip(" *"))
-                    in_block = False
-                else:
-                    comments.append(stripped.strip(" *"))
-                continue
-
-            # Line comment
-            if stripped.startswith("//"):
-                comment = stripped.lstrip("/").strip()
-                if comment:
-                    comments.append(comment)
-            elif stripped and not in_block:
-                break
-
-        return " ".join(comments)[: self.max_chars]
-
-
-class ScriptDetector:
-    """Detect executable scripts in skill directories.
-
-    Scans skill directories for executable scripts and extracts metadata.
-    Detection happens lazily when accessing Skill.scripts property.
+    This class is internal (name prefixed with _) and not part of the public API.
+    It is used by SkillManager.execute_skill_script() to validate script paths.
 
     Search Locations:
         - scripts/ directory (recursive up to max_depth)
@@ -547,24 +383,22 @@ class ScriptDetector:
         - __pycache__, node_modules, .venv, venv directories
         - Symbolic links (to avoid confusion and duplicates)
 
-    Usage:
-        detector = ScriptDetector(max_depth=5)
+    Usage (internal only):
+        detector = _ScriptDetector(max_depth=5)
         scripts = detector.detect_scripts(skill_base_dir)
 
     Version:
         Added in v0.3.0
+        Internalized in v0.5.0 (renamed from ScriptDetector)
     """
 
-    def __init__(self, max_depth: int = 5, max_lines_for_description: int = 50):
+    def __init__(self, max_depth: int = 5):
         """Initialize script detector.
 
         Args:
             max_depth: Maximum directory nesting depth for recursive scan
-            max_lines_for_description: Max lines to scan for description extraction
         """
         self.max_depth = max_depth
-        self.max_lines_for_description = max_lines_for_description
-        self.extractor = ScriptDescriptionExtractor()
 
     def detect_scripts(self, skill_base_dir: Path) -> ScriptList:
         """Detect all executable scripts in skill directory.
@@ -576,7 +410,7 @@ class ScriptDetector:
             List of ScriptMetadata objects (may be empty if no scripts found)
 
         Example:
-            >>> detector = ScriptDetector()
+            >>> detector = _ScriptDetector()
             >>> scripts = detector.detect_scripts(Path('/path/to/skill'))
             >>> len(scripts)
             3
@@ -709,16 +543,10 @@ class ScriptDetector:
             # Get relative path
             relative_path = script_path.relative_to(skill_base_dir)
 
-            # Extract description
-            description = self.extractor.extract(
-                script_path, max_lines=self.max_lines_for_description
-            )
-
             return ScriptMetadata(
                 name=script_path.stem,
                 path=relative_path,
                 script_type=_get_script_type(script_path),
-                description=description,
             )
 
         except (ValueError, OSError) as e:
